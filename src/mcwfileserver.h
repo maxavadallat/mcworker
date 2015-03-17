@@ -14,7 +14,7 @@ class FileServer : public QObject
 
 public:
     // Constructor
-    FileServer(QObject* aParent = NULL);
+    FileServer(const QString& aServerName, QObject* aParent = NULL);
 
     // Start Server
     void startServer();
@@ -47,7 +47,16 @@ protected slots:
     // New Client Connection Slot
     void newClientConnection();
 
+    // Client Closed
+    void clientClosed(const unsigned int& aID);
+
+    // Delayed Exit Slot
+    void delayedExit();
+
 private:
+
+    // Server Name
+    QString                         serverName;
 
     // Local Server
     QLocalServer                    localServer;

@@ -1,4 +1,6 @@
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QTimer>
 #include <QDebug>
 
 #include "mcwfileserver.h"
@@ -8,8 +10,9 @@
 //==============================================================================
 // Constructor
 //==============================================================================
-FileServer::FileServer(QObject* aParent)
+FileServer::FileServer(const QString& aServerName, QObject* aParent)
     : QObject(aParent)
+    , serverName(aServerName)
 {
     qDebug() << "FileServer::FileServer";
 
@@ -38,13 +41,13 @@ void FileServer::startServer()
     qDebug() << "FileServer::startServer";
 
     // Remove Previous Server
-    QLocalServer::removeServer(DEFAULT_SERVER_LISTEN_PATH);
+    QLocalServer::removeServer(serverName);
 
     // Connect Signal
     connect(&localServer, SIGNAL(newConnection()), this, SLOT(newClientConnection()));
 
     // Start Listen
-    localServer.listen(DEFAULT_SERVER_LISTEN_PATH);
+    localServer.listen(serverName);
 }
 
 //==============================================================================
@@ -54,7 +57,11 @@ void FileServer::stopServer()
 {
     qDebug() << "FileServer::stopServer";
 
+    // Close
     localServer.close();
+
+    // Remove Previous Server
+    QLocalServer::removeServer(serverName);
 }
 
 //==============================================================================
@@ -70,8 +77,57 @@ void FileServer::newClientConnection()
     // Write ID Data
     newServerConnection->writeData(QString("%1").arg(newServerConnection->cID).toLocal8Bit());
 
+    // Connect Signals
+    connect(newServerConnection, SIGNAL(closed(uint)), this, SLOT(clientClosed(uint)));
+
     // Add To Clients
     clientList << newServerConnection;
+}
+
+//==============================================================================
+// Client Closed Slot
+//==============================================================================
+void FileServer::clientClosed(const unsigned int& aID)
+{
+    qDebug() << "FileServer::clientClosed - aID: " << aID;
+
+    // Get Clients Count
+    int cCount = clientList.count();
+
+    // Go Thru Clients
+    for (int i=0; i<cCount; ++i) {
+        // Get Client
+        FileServerConnection* client = clientList[i];
+
+        // Check Client ID
+        if (client->cID == aID) {
+            // Remove Client
+            clientList.removeAt(i);
+
+            // Delete Client
+            delete client;
+            client = NULL;
+
+            // Check Client List
+            if (clientList.count() <= 0) {
+                qDebug() << "FileServer::clientClosed - aID: " << aID << " - No More Clients Exiting... ";
+
+                // Exit App
+                QCoreApplication::exit();
+            }
+
+            return;
+        }
+    }
+}
+
+//==============================================================================
+// Delayed Exit Slot
+//==============================================================================
+void FileServer::delayedExit()
+{
+    qDebug() << "FileServer::delayedExit";
+
 }
 
 //==============================================================================
@@ -131,6 +187,9 @@ void FileServer::abortClient(const unsigned int& aID)
             // Abort Client
             client->abort();
 
+            // Remove From Client List
+            //clientList.removeAt(i);
+
             return;
         }
     }
@@ -155,6 +214,9 @@ void FileServer::closeClient(const unsigned int& aID)
         if (client->cID == aID) {
             // Close Client
             client->close();
+
+            // Remove From Client List
+            //clientList.removeAt(i);
 
             return;
         }

@@ -1,8 +1,10 @@
 #include <QThread>
+#include <QVariantMap>
 #include <QDebug>
 
 #include "mcwfileserver.h"
 #include "mcwfileserverconnection.h"
+#include "mcwfileserverconnectionworker.h"
 #include "mcwconstants.h"
 
 //==============================================================================
@@ -12,6 +14,7 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QLocalSocke
     : QObject(aParent)
     , cID(aCID)
     , clientSocket(aLocalSocket)
+    , worker(NULL)
 {
     // Init
     init();
@@ -22,6 +25,9 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QLocalSocke
 //==============================================================================
 void FileServerConnection::init()
 {
+    // Create Worker
+
+
     // Connect Signals
     connect(clientSocket, SIGNAL(connected()), this, SLOT(socketConnected()));
     connect(clientSocket, SIGNAL(disconnected()), this, SLOT(socketDisconnected()));
@@ -32,8 +38,8 @@ void FileServerConnection::init()
     connect(clientSocket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
     connect(clientSocket, SIGNAL(stateChanged(QLocalSocket::LocalSocketState)), this, SLOT(socketStateChanged(QLocalSocket::LocalSocketState)));
 
-    // ...
 
+    // ...
 
 }
 
@@ -140,17 +146,8 @@ void FileServerConnection::socketDisconnected()
 {
     qDebug() << "FileServerConnection::socketDisconnected - cID: " << cID;
 
-    // ...
-
     // Emit Closed Signal
     emit closed(cID);
-
-    // Reset CID
-    cID = (unsigned int)-1;
-
-    // ...
-
-    deleteLater();
 }
 
 //==============================================================================
@@ -211,6 +208,8 @@ void FileServerConnection::socketReadyRead()
 
     // Read Data
     lastBuffer = clientSocket->readAll();
+
+
 
     // ...
 

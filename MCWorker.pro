@@ -23,7 +23,8 @@ CONFIG                  -= app_bundle
 SOURCES                 += src/mcwmain.cpp \
                         src/mcwfileserver.cpp \
                         src/mcwutility.cpp \
-    src/mcwfileserverconnection.cpp
+                        src/mcwfileserverconnection.cpp \
+                        src/mcwfileserverconnectionworker.cpp
 
 
 # Headera
@@ -32,13 +33,14 @@ HEADERS                 += \
                         src/mcwutility.h \
                         src/mcwfileserver.h \
                         src/mcwinterface.h \
-    src/mcwfileserverconnection.h
+                        src/mcwfileserverconnection.h \
+                        src/mcwfileserverconnectionworker.h
 
 # Other Files
 OTHER_FILES             += \
 
 exportedheaders.files   += src/mcwinterface.h
-exportedheaders.path    = /usr/include/mxc
+exportedheaders.path    = /usr/local/include/mcw
 
 # Installs
 INSTALLS                += exportedheaders
@@ -50,3 +52,5 @@ OBJMOC                  = ./objs
 MOC_DIR                 = ./objs
 UI_DIR                  = ./objs
 RCC_DIR                 = ./objs
+
+

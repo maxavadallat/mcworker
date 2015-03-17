@@ -5,6 +5,7 @@
 #include <QLocalSocket>
 
 class FileServer;
+class FileServerConnectionWorker;
 
 //==============================================================================
 // File Server Connection Class
@@ -59,17 +60,23 @@ protected slots:
     // Socket Ready Read Slot
     void socketReadyRead();
 
+protected:
+
+
 private:
     friend class FileServer;
 
     // Client ID
-    unsigned int        cID;
+    unsigned int                cID;
 
     // Local Socket
-    QLocalSocket*       clientSocket;
+    QLocalSocket*               clientSocket;
+
+    // Worker
+    FileServerConnectionWorker* worker;
 
     // Last Buffer
-    QByteArray          lastBuffer;
+    QByteArray                  lastBuffer;
 };
 
 #endif // FILESERVERCONNECTION_H
