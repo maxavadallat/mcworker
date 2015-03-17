@@ -53,6 +53,23 @@ protected slots:
     // Delayed Exit Slot
     void delayedExit();
 
+    // Client Activity Socket
+    void clientActivity(const unsigned int& aID);
+
+    // Start Idle Timer
+    void startIdleTimer();
+
+    // Stop Idle Timer
+    void stopIdleTimer();
+
+    // Restart Idle Timer
+    void restartIdleCountdown();
+
+protected: // From QObject
+
+    // Timer Event
+    virtual void timerEvent(QTimerEvent* aEvent);
+
 private:
 
     // Server Name
@@ -63,6 +80,12 @@ private:
 
     // Clients
     QList<FileServerConnection*>    clientList;
+
+    // Root Idle Timer ID
+    int                             idleTimerID;
+
+    // Root Idle Timer Counter
+    int                             idleTimerCounter;
 
 };
 

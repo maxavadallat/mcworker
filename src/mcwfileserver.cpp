@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QTimer>
+#include <QFile>
 #include <QDebug>
 
 #include "mcwfileserver.h"
@@ -13,6 +14,8 @@
 FileServer::FileServer(const QString& aServerName, QObject* aParent)
     : QObject(aParent)
     , serverName(aServerName)
+    , idleTimerID(-1)
+    , idleTimerCounter(DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS)
 {
     qDebug() << "FileServer::FileServer";
 
@@ -38,16 +41,31 @@ void FileServer::init()
 //==============================================================================
 void FileServer::startServer()
 {
-    qDebug() << "FileServer::startServer";
+    // Check Full Server Name Path
+    if (QFile::exists(localServer.fullServerName())) {
 
-    // Remove Previous Server
-    QLocalServer::removeServer(serverName);
+        // Remove Previous Server
+        if (!localServer.removeServer(serverName)) {
+            qWarning() << "FileServer::startServer - ERROR REMOVING OLD PATH INSTANCE!!";
+        }
+    }
 
     // Connect Signal
     connect(&localServer, SIGNAL(newConnection()), this, SLOT(newClientConnection()));
 
+    // Set Socket Options
+    localServer.setSocketOptions(QLocalServer::WorldAccessOption);
+
+    qDebug() << "FileServer::startServer - serverName: " << localServer.fullServerName();
+
     // Start Listen
     localServer.listen(serverName);
+
+    // Check Server Name if it is Root
+    if (serverName == QString(DEFAULT_SERVER_LISTEN_ROOT_PATH)) {
+        // Start Idle Timer
+        startIdleTimer();
+    }
 }
 
 //==============================================================================
@@ -128,6 +146,60 @@ void FileServer::delayedExit()
 {
     qDebug() << "FileServer::delayedExit";
 
+    // Exit Application
+    QCoreApplication::exit();
+}
+
+//==============================================================================
+// Client Activity Socket
+//==============================================================================
+void FileServer::clientActivity(const unsigned int& aID)
+{
+    qDebug() << "FileServer::clientActivity - aID: " << aID;
+
+    // Restart Idle Countdown
+    restartIdleCountdown();
+}
+
+//==============================================================================
+// Start Idle Timer
+//==============================================================================
+void FileServer::startIdleTimer()
+{
+    // Check Timer ID
+    if (idleTimerID == -1) {
+        qDebug() << "FileServer::startIdleTimer";
+        // Reset Counter
+        idleTimerCounter = DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS;
+        // Start Timer
+        idleTimerID = startTimer(DEFAULT_ROOT_FILE_SERVER_IDLE_TIMEOUT);
+    }
+}
+
+//==============================================================================
+// Stop Idle Timer
+//==============================================================================
+void FileServer::stopIdleTimer()
+{
+    // Check Timer ID
+    if (idleTimerID != -1) {
+        qDebug() << "FileServer::stopIdleTimer";
+        // Kill Timer
+        killTimer(idleTimerID);
+        // Reset Timer ID
+        idleTimerID = -1;
+    }
+}
+
+//==============================================================================
+// Restart Idle Timer
+//==============================================================================
+void FileServer::restartIdleCountdown()
+{
+    qDebug() << "FileServer::restartIdleCountdown";
+
+    // Reset Idle Counter
+    idleTimerCounter = DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS;
 }
 
 //==============================================================================
@@ -159,6 +231,9 @@ void FileServer::closeAllConnections()
 void FileServer::shutDown()
 {
     qDebug() << "FileServer::shutDown";
+
+    // Stop Idle Timer
+    stopIdleTimer();
 
     // Close All Connections
     closeAllConnections();
@@ -219,6 +294,27 @@ void FileServer::closeClient(const unsigned int& aID)
             //clientList.removeAt(i);
 
             return;
+        }
+    }
+}
+
+//==============================================================================
+// Timer Event
+//==============================================================================
+void FileServer::timerEvent(QTimerEvent* aEvent)
+{
+    // Check Event
+    if (aEvent) {
+        // Check Timer ID
+        if (aEvent->timerId() == idleTimerID) {
+            // Decrease Idle Counter
+            idleTimerCounter--;
+
+            // Check Counter
+            if (idleTimerCounter <= 0) {
+                // Close All Clients
+
+            }
         }
     }
 }

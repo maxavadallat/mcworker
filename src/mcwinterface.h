@@ -74,7 +74,10 @@
 
 
 // Default Root File Server Idle Timeout in Millisecs
-#define DEFAULT_ROOT_FILE_SERVER_IDLE_TIMEOUT   (5 * 1000 * 60)
+#define DEFAULT_ROOT_FILE_SERVER_IDLE_TIMEOUT   1000
+
+// Default Root File Server Idle Max Ticks - 5 MINUTES
+#define DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS (5 * 60)
 
 
 

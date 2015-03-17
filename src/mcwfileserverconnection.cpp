@@ -1,4 +1,6 @@
 #include <QThread>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QVariantMap>
 #include <QDebug>
 
@@ -175,7 +177,7 @@ void FileServerConnection::socketStateChanged(QLocalSocket::LocalSocketState soc
 //==============================================================================
 void FileServerConnection::socketAboutToClose()
 {
-    qDebug() << "FileServerConnection::socketAboutToClose - cID: " << cID;
+    //qDebug() << "FileServerConnection::socketAboutToClose - cID: " << cID;
 
     // ...
 }
@@ -204,12 +206,47 @@ void FileServerConnection::socketReadChannelFinished()
 //==============================================================================
 void FileServerConnection::socketReadyRead()
 {
+    // Mutex Lock
+    QMutexLocker locker(&mutex);
+
     qDebug() << "FileServerConnection::socketReadyRead - cID: " << cID << " - bytesAvailable: " << clientSocket->bytesAvailable();
 
     // Read Data
     lastBuffer = clientSocket->readAll();
 
+    // Init New Data Stream
+    QDataStream newDataStream(lastBuffer);
 
+    // Init New Variant Map
+    QVariantMap newMap;
+
+    // Red Data Stream To Variant Map
+    newDataStream >> newMap;
+
+    // Parse Request
+    parseRequest(newMap);
+}
+
+//==============================================================================
+// Parse Request
+//==============================================================================
+void FileServerConnection::parseRequest(const QVariantMap& aRequest)
+{
+    // Get Request Client ID
+    unsigned int rcID = aRequest[DEFAULT_KEY_CID].toUInt();
+
+    // Check Client ID
+    if (rcID != cID) {
+        qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - INVALID CLIENT REQUEST: " << rcID;
+
+        return;
+    }
+
+    // ...
+
+    qDebug() << "FileServerConnection::parseRequest - cID: " << cID;
+
+    qDebug() << aRequest;
 
     // ...
 

@@ -29,6 +29,9 @@ public:
 
 signals:
 
+    // Activity
+    void activity(const unsigned int& aID);
+
     // Closed Signal
     void closed(const unsigned int& aID);
 
@@ -62,6 +65,8 @@ protected slots:
 
 protected:
 
+    // Parse Request
+    void parseRequest(const QVariantMap& aRequest);
 
 private:
     friend class FileServer;
@@ -77,6 +82,9 @@ private:
 
     // Last Buffer
     QByteArray                  lastBuffer;
+
+    // Mutex
+    QMutex                      mutex;
 };
 
 #endif // FILESERVERCONNECTION_H
