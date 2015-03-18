@@ -9,6 +9,20 @@
 class FileServerConnection;
 
 //==============================================================================
+// File Server Connection Worker Status Type
+//==============================================================================
+enum FSCWStatusType
+{
+    EFSCWSUnknown   = -1,
+    EFSCWSIdle      = 0,
+    EFSCWSBusy,
+    EFSCWSWaiting,
+    EFSCWSAborted,
+    EFSCWSFinished,
+    EFSCWSError
+};
+
+//==============================================================================
 // File Server Connection Worker Class
 //==============================================================================
 class FileServerConnectionWorker : public QObject
@@ -19,11 +33,10 @@ public:
     // Constructor
     explicit FileServerConnectionWorker(FileServerConnection* aConnection, QObject* aParent = NULL);
 
+    // Start
+    void start(const int& aOperation);
     // Abort
     void abort();
-
-    // Response
-    void setResponse(const int& aResponse);
 
     // Destructor
     virtual ~FileServerConnectionWorker();
@@ -33,15 +46,8 @@ signals:
     // Start Operation Signal
     void startOperation(const int& aOperation);
 
-    // Operation Finished Signal
-    void operationFinished(const int& aOperation);
-
-    // Operation Error Signal
-    void operationError(const int& aOperation, const int& aError);
-
     // Operation Status Update Signal
     void operationStatusChanged(const int& aOperation, const int& aStatus);
-
     // Operation Need Confirm Signal
     void operationNeedConfirm(const int& aOperation, const int& aCode);
 
@@ -50,27 +56,32 @@ protected slots:
     // Do Operation
     void doOperation(const int& aOperation);
 
+    // Set Status
+    void setStatus(const FSCWStatusType& aStatus);
+
     // Worker Thread Finished
     void workerThreadFinished();
 
 private:
+    friend class FileServerConnection;
+
     // File Server Connection
     FileServerConnection*   fsConnection;
 
     // Worker Thread
     QThread*                workerThread;
 
-    // Abort Signal
-    bool                    abortSignal;
-
-    // Operation
-    int                     operation;
-
     // Worker Mutex
     QMutex                  mutex;
 
     // Wait Condition
     QWaitCondition          waitCondition;
+
+    // Status
+    FSCWStatusType          status;
+
+    // Operation
+    int                     operation;
 };
 
 #endif // FILESERVERCONNECTIONWORKER_H

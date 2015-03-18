@@ -56,7 +56,7 @@ void FileServer::startServer()
     // Set Socket Options
     localServer.setSocketOptions(QLocalServer::WorldAccessOption);
 
-    qDebug() << "FileServer::startServer - serverName: " << localServer.fullServerName();
+    qDebug() << "FileServer::startServer - serverName: " << serverName;
 
     // Start Listen
     localServer.listen(serverName);
@@ -73,13 +73,13 @@ void FileServer::startServer()
 //==============================================================================
 void FileServer::stopServer()
 {
-    qDebug() << "FileServer::stopServer";
+    qDebug() << "FileServer::stopServer - serverName: " << serverName;
 
     // Close
     localServer.close();
 
     // Remove Previous Server
-    QLocalServer::removeServer(serverName);
+    localServer.removeServer(serverName);
 }
 
 //==============================================================================
@@ -96,10 +96,24 @@ void FileServer::newClientConnection()
     newServerConnection->writeData(QString("%1").arg(newServerConnection->cID).toLocal8Bit());
 
     // Connect Signals
+    connect(newServerConnection, SIGNAL(activity(uint)), this, SLOT(clientActivity(uint)));
     connect(newServerConnection, SIGNAL(closed(uint)), this, SLOT(clientClosed(uint)));
 
     // Add To Clients
     clientList << newServerConnection;
+}
+
+//==============================================================================
+// Client Activity
+//==============================================================================
+void FileServer::clientActivity(const unsigned int& aID)
+{
+    Q_UNUSED(aID);
+
+    //qDebug() << "FileServer::clientActivity - aID: " << aID;
+
+    // Restart Idle CountDown
+    restartIdleCountdown();
 }
 
 //==============================================================================
@@ -140,6 +154,17 @@ void FileServer::clientClosed(const unsigned int& aID)
 }
 
 //==============================================================================
+// Quit Received Slot
+//==============================================================================
+void FileServer::clientQuitReceived(const unsigned int& aID)
+{
+    qDebug() << "FileServer::clientQuitReceived - aID: " << aID;
+
+    // Close All Connections
+    closeAllConnections();
+}
+
+//==============================================================================
 // Delayed Exit Slot
 //==============================================================================
 void FileServer::delayedExit()
@@ -148,17 +173,6 @@ void FileServer::delayedExit()
 
     // Exit Application
     QCoreApplication::exit();
-}
-
-//==============================================================================
-// Client Activity Socket
-//==============================================================================
-void FileServer::clientActivity(const unsigned int& aID)
-{
-    qDebug() << "FileServer::clientActivity - aID: " << aID;
-
-    // Restart Idle Countdown
-    restartIdleCountdown();
 }
 
 //==============================================================================
@@ -196,7 +210,7 @@ void FileServer::stopIdleTimer()
 //==============================================================================
 void FileServer::restartIdleCountdown()
 {
-    qDebug() << "FileServer::restartIdleCountdown";
+    //qDebug() << "FileServer::restartIdleCountdown";
 
     // Reset Idle Counter
     idleTimerCounter = DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS;
@@ -216,13 +230,12 @@ void FileServer::closeAllConnections()
     for (int i=0; i<cCount; ++i) {
         // Get Client
         FileServerConnection* client = clientList[i];
-
         // Close Client
         client->close();
     }
 
     // Clear Client List
-    clientList.clear();
+    //clientList.clear();
 }
 
 //==============================================================================

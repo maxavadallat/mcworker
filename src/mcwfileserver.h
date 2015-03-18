@@ -47,14 +47,17 @@ protected slots:
     // New Client Connection Slot
     void newClientConnection();
 
-    // Client Closed
+    // Client Activity Slot
+    void clientActivity(const unsigned int& aID);
+
+    // Client Closed Slot
     void clientClosed(const unsigned int& aID);
+
+    // Quit Received Slot
+    void clientQuitReceived(const unsigned int& aID);
 
     // Delayed Exit Slot
     void delayedExit();
-
-    // Client Activity Socket
-    void clientActivity(const unsigned int& aID);
 
     // Start Idle Timer
     void startIdleTimer();
