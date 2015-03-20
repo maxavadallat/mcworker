@@ -1,6 +1,7 @@
 #ifndef FILESERVERCONNECTION_H
 #define FILESERVERCONNECTION_H
 
+#include <QDir>
 #include <QObject>
 #include <QLocalSocket>
 
@@ -10,8 +11,7 @@ class FileServerConnectionWorker;
 
 enum FSCOperationType
 {
-    EFSCOTClientID      = 0x0001,
-    EFSCOTListDir,
+    EFSCOTListDir       = 0x0001,
     EFSCOTScanDir,
     EFSCOTTreeDir,
     EFSCOTMakeDir,
@@ -22,6 +22,7 @@ enum FSCOperationType
     EFSCOTAbort,
     EFSCOTQuit,
     EFSCOTResponse,
+    EFSCOTAcknowledge,
 
     EFSCOTTest          = 0x00ff
 };
@@ -69,11 +70,66 @@ protected slots:
     // Set Options
     void setOptions(const int& aOptions, const bool& aWake = true);
 
+    // Handle Acknowledge
+    void handleAcknowledge();
+
+    // Write Data
+    void writeDataWithSignal(const QVariantMap& aData);
+
     // Write Data
     void writeData(const QByteArray& aData);
+    // Write Data
+    void writeData(const QVariantMap& aData);
 
     // Test Run
     void testRun();
+
+    // Send File Operation Progress
+    void sendProgress(const QString& aOp,
+                      const QString& aCurrFilePath,
+                      const quint64& aCurrProgress,
+                      const quint64& aCurrTotal,
+                      const quint64& aOverallProgress,
+                      const quint64& aOverallTotal,
+                      const int& aSpeed);
+
+    // Send File Operation Finished
+    void sendFinished(const QString& aOp,
+                      const QString& aPath,
+                      const QString& aSource,
+                      const QString& aTarget);
+
+    // Send File Operation Error
+    int sendError(const QString& aOp,
+                  const QString& aPath,
+                  const QString& aSource,
+                  const QString& aTarget,
+                  const int& aError,
+                  const bool& aWait = true);
+
+    // Send Need Confirmation
+    void sendfileOpNeedConfirm(const QString& aOp,
+                               const int& aCode,
+                               const QString& aPath,
+                               const QString& aSource,
+                               const QString& aTarget);
+
+    // Send Dir Size Scan Progress
+    void sendDirSizeScanProgress(const QString& aPath,
+                                 const quint64& aNumDirs,
+                                 const quint64& aNumFiles,
+                                 const quint64& aScannedSize);
+
+    // Send Dir List Item Found
+    void sendDirListItemFound(const QString& aPath,
+                              const QString& aFileName);
+
+    // Send File Operation Queue Item Found
+    void fileOpQueueItemFound(const QString& aOp,
+                              const QString& aSource,
+                              const QString& aTarget);
+
+
 
 protected slots: // QLocalSocket
 
@@ -103,7 +159,7 @@ protected slots: // FileServerConnectionWorker
     void workerOperationNeedConfirm(const int& aOperation, const int& aCode);
 
     // Get Dir List
-    void getDirList(const QString& aDirPath, const int& aOptions, const int& aSortFlags);
+    void getDirList(const QString& aDirPath, const int& aFilters, const int& aSortFlags);
 
     // Create Directory
     void createDir(const QString& aDirPath);
@@ -125,6 +181,18 @@ protected slots: // FileServerConnectionWorker
 
 protected:
 
+    // Check File Exists - Loop
+    bool checkFileExists(QString& aFilePath, const bool& aExpected);
+    // Check Dir Exists - Loop
+    bool checkDirExist(QString& aDirPath, const bool& aExpected);
+
+    // Parse Filters
+    QDir::Filters parseFilters(const int& aFilters);
+    // Parse Sort Flags
+    QDir::SortFlags parseSortFlags(const int& aSortFlags);
+
+protected:
+
     // Parse Request
     void parseRequest(const QVariantMap& aRequest);
 
@@ -135,35 +203,52 @@ private:
     // Client ID
     unsigned int                cID;
 
+    // Client ID Is Sent
+    bool                        cIDSent;
+
     // Local Socket
     QLocalSocket*               clientSocket;
+    // Client Thread
+    QThread*                    clientThread;
 
     // Worker
     FileServerConnectionWorker* worker;
 
     // Last Buffer
     QByteArray                  lastBuffer;
-
     // Last Map
     QVariantMap                 lastDataMap;
 
     // Mutex
     QMutex                      mutex;
 
-    // Operation Matrix
+    // Operation Map
     QMap<QString, int>          operationMap;
 
     // Abort Signal
     bool                        abortFlag;
 
     // Operation
-    int                         operation;
-
+    QString                     operation;
+    // Operation ID
+    int                         opID;
     // Options
     int                         options;
-
+    // Filters
+    int                         filters;
+    // Sort Flags
+    int                         sortFlags;
     // User Response
     int                         response;
+
+    // Dir Path
+    QString                     dirPath;
+    // File Path
+    QString                     filePath;
+    // Source
+    QString                     source;
+    // Target
+    QString                     target;
 
 };
 

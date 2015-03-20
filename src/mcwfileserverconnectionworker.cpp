@@ -1,5 +1,6 @@
-#include <QDebug>
+#include <QApplication>
 #include <QMutexLocker>
+#include <QDebug>
 
 #include "mcwfileserverconnection.h"
 #include "mcwfileserverconnectionworker.h"
@@ -23,9 +24,6 @@ FileServerConnectionWorker::FileServerConnectionWorker(FileServerConnection* aCo
 
     // Move to Thread
     moveToThread(workerThread);
-
-    // Start Worker Thread
-    //workerThread->start();
 
     // Set Status
     setStatus(EFSCWSIdle);
@@ -66,18 +64,25 @@ void FileServerConnectionWorker::abort()
 {
     // Check File Server Connection
     if (!fsConnection) {
-        qDebug() << "FileServerConnectionWorker::abort - operation: " << operation << " - NO FILE SERVER CONNECTION!!";
+        qWarning() << "FileServerConnectionWorker::abort - operation: " << operation << " - NO FILE SERVER CONNECTION!!";
+        return;
+    }
+
+    // Check Status
+    if (status == EFSCWSAborted) {
 
         return;
     }
 
-    qDebug() << "FileServerConnectionWorker::abort";
+    // Set Status
+    setStatus(EFSCWSAborted);
 
-    // Unlock Mutex
-    //mutex.unlock();
+    qDebug() << "FileServerConnectionWorker::abort";
 
     // Check Worker Thread
     if (workerThread) {
+        // Wake One Condition
+        waitCondition.wakeOne();
         // Terminate
         workerThread->terminate();
         // Wait
@@ -88,8 +93,6 @@ void FileServerConnectionWorker::abort()
         //workerThread = NULL;
     }
 
-    // Set Status
-    setStatus(EFSCWSAborted);
 }
 
 //==============================================================================
@@ -100,6 +103,12 @@ void FileServerConnectionWorker::doOperation(const int& aOperation)
     // Init Mutex Locker
     QMutexLocker locker(&mutex);
 
+    // Chec kFile server Connection
+    if (!fsConnection) {
+        qWarning() << "FileServerConnectionWorker::doOperation - operation: " << aOperation << " - NO FILE SERVER CONNECTION!!";
+        return;
+    }
+
     // Check Status
     if (status == EFSCWSBusy || status == EFSCWSWaiting) {
         qWarning() << "FileServerConnectionWorker::doOperation - operation: " << aOperation << " - WORKER BUSY!!";
@@ -109,13 +118,23 @@ void FileServerConnectionWorker::doOperation(const int& aOperation)
     // Set Operation
     operation = aOperation;
 
-    qDebug() << "FileServerConnectionWorker::doOperation - operation: " << aOperation;
+    // Reset Abort Flag
+    fsConnection->abortFlag = false;
+
+    //qDebug() << "FileServerConnectionWorker::doOperation - operation: " << aOperation;
 
     // Set Status
     setStatus(EFSCWSBusy);
 
     // Switch Operation
     switch (operation) {
+        case EFSCOTListDir:
+            // Get Dir List
+            fsConnection->getDirList(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString(),
+                                     fsConnection->lastDataMap[DEFAULT_KEY_FILTERS].toInt(),
+                                     fsConnection->lastDataMap[DEFAULT_KEY_FLAGS].toInt());
+        break;
+
         case EFSCOTTest:
             // Test Run
             fsConnection->testRun();
@@ -125,6 +144,11 @@ void FileServerConnectionWorker::doOperation(const int& aOperation)
             qWarning() << "FileServerConnectionWorker::doOperation - UNHANDLED aOperation: " << aOperation;
         break;
     }
+
+    //qDebug() << "FileServerConnectionWorker::doOperation - operation: " << aOperation << " - FINISHED!";
+
+    // Set Status
+    setStatus(EFSCWSFinished);
 }
 
 //==============================================================================
@@ -149,10 +173,16 @@ void FileServerConnectionWorker::workerThreadFinished()
 {
     qDebug() << "FileServerConnectionWorker::workerThreadFinished - operation: " << operation;
 
+    // Move Back To Application Main Thread
+    moveToThread(QApplication::instance()->thread());
+
     // ...
 
-    // Set Status
-    setStatus(EFSCWSFinished);
+    // Check Status
+    if (status == EFSCWSAborted) {
+        qDebug() << "FileServerConnectionWorker::workerThreadFinished - operation: " << operation << " - ABORTED, DELETING!";
+        delete this;
+    }
 }
 
 //==============================================================================
@@ -169,6 +199,12 @@ FileServerConnectionWorker::~FileServerConnectionWorker()
         workerThread->deleteLater();
         // Reset Worker Thread
         workerThread = NULL;
+    }
+
+    // Check Connection
+    if (fsConnection) {
+        // Reset Abort Flag
+        fsConnection->abortFlag = false;
     }
 
     // ...

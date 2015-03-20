@@ -5,6 +5,8 @@
 #include <QWaitCondition>
 #include <QThread>
 #include <QMutex>
+#include <QVariantMap>
+#include <QByteArray>
 
 class FileServerConnection;
 
@@ -19,7 +21,7 @@ enum FSCWStatusType
     EFSCWSWaiting,
     EFSCWSAborted,
     EFSCWSFinished,
-    EFSCWSError
+    EFSCWSError     = 0xffff
 };
 
 //==============================================================================
@@ -50,6 +52,9 @@ signals:
     void operationStatusChanged(const int& aOperation, const int& aStatus);
     // Operation Need Confirm Signal
     void operationNeedConfirm(const int& aOperation, const int& aCode);
+
+    // Write Data Signal
+    void writeData(const QVariantMap& aData);
 
 protected slots:
 
@@ -85,3 +90,4 @@ private:
 };
 
 #endif // FILESERVERCONNECTIONWORKER_H
+

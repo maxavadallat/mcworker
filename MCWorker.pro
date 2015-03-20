@@ -15,6 +15,7 @@ TEMPLATE                = app
 QT                      += core
 QT                      -= gui
 QT                      += network
+QT                      += widgets
 
 CONFIG                  -= app_bundle
 
