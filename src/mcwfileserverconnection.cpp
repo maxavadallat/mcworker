@@ -11,6 +11,7 @@
 #include "mcwfileserver.h"
 #include "mcwfileserverconnection.h"
 #include "mcwfileserverconnectionworker.h"
+#include "mcwutility.h"
 #include "mcwconstants.h"
 
 
@@ -469,17 +470,24 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     QDir currDir(localPath);
 
     // Get Entry Info List
-    QFileInfoList eiList = currDir.entryInfoList(parseFilters(aFilters), parseSortFlags(aSortFlags));
+    QFileInfoList eiList = currDir.entryInfoList(parseFilters(aFilters));
+
+    // Get Dir First
+    bool dirFirst           = aSortFlags & DEFAULT_SORT_DIRFIRST;
+    // Get Reverse
+    bool reverse            = aSortFlags & DEFAULT_SORT_REVERSE;
+    // Get Case Sensitive
+    bool caseSensitive      = aSortFlags & DEFAULT_SORT_CASE;
+    // Get Sort Type
+    FileSortType sortType   = (FileSortType)(aSortFlags & 0x000F);
 
     // Sort
-
-    // ...
+    sortFileList(eiList, sortType, reverse, dirFirst, caseSensitive);
 
     // Get Entry Info List Count
     int eilCount = eiList.count();
 
-    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << eilCount;
-
+    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << eilCount << " - df: " << dirFirst << " - r: " << reverse << " - cs: " << caseSensitive;
 
     // Go Thru List
     for (int i=0; i<eilCount; ++i) {
@@ -508,7 +516,37 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
 //==============================================================================
 void FileServerConnection::createDir(const QString& aDirPath)
 {
+    qDebug() << "FileServerConnection::createDir - cID: " << cID << " - aDirPath: " << aDirPath;
 
+    // Init Local Path
+    QString localPath = aDirPath;
+
+    // Check Dir Exists
+    if (!checkDirExist(localPath, false)) {
+
+        return;
+    }
+
+    // Init Current Dir
+    QDir currDir(QDir::homePath());
+
+    // Init Result
+    bool result = false;
+
+    do  {
+        // Make Path
+        result = currDir.mkpath(localPath);
+
+        // Check Result
+        if (!result) {
+            // Send Error
+            sendError(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "", DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!result && response == DEFAULT_RESPONSE_RETRY);
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
 }
 
 //==============================================================================
@@ -516,7 +554,47 @@ void FileServerConnection::createDir(const QString& aDirPath)
 //==============================================================================
 void FileServerConnection::deleteFile(const QString& aFilePath)
 {
+    qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - aFilePath: " << aFilePath;
 
+    // Init Local Path
+    QString localPath = aFilePath;
+
+    // Check File Exists
+    if (!checkFileExists(localPath, true)) {
+
+        return;
+    }
+
+    // Init File Info
+    QFileInfo fileInfo(localPath);
+    // Init Current Dir
+    QDir currDir(QDir::homePath());
+
+    // Check If Dir | Bundle
+    if (fileInfo.isDir() && fileInfo.isBundle()) {
+
+        // Go Thru Directory and Send Queue Items
+        deleteDirectory(localPath);
+
+    } else {
+        // Init Result
+        bool result = false;
+
+        do  {
+            // Make Remove File
+            result = currDir.remove(localPath);
+
+            // Check Result
+            if (!result) {
+                // Send Error
+                sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
+            }
+
+        } while (!result && response == DEFAULT_RESPONSE_RETRY);
+    }
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
 }
 
 //==============================================================================
@@ -785,6 +863,9 @@ void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QStrin
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
+
+    // Wait
+    worker->waitCondition.wait(&worker->mutex);
 }
 
 //==============================================================================
@@ -896,7 +977,7 @@ bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpecte
 QDir::Filters FileServerConnection::parseFilters(const int& aFilters)
 {
     // Init Local Filters
-    QDir::Filters localFilters = QDir::AllEntries | QDir::AllDirs | QDir::NoDot | QDir::CaseSensitive;
+    QDir::Filters localFilters = QDir::AllEntries | QDir::NoDot;
 
     // Check Options
     if (aFilters & DEFAULT_FILTER_SHOW_HIDDEN) {
@@ -931,6 +1012,30 @@ QDir::SortFlags FileServerConnection::parseSortFlags(const int& aSortFlags)
     }
 */
     return localSortFlags;
+}
+
+//==============================================================================
+// Delete Directory - Generate File Delete Queue Items
+//==============================================================================
+void FileServerConnection::deleteDirectory(const QString& aDirPath)
+{
+
+}
+
+//==============================================================================
+// Copy Directory - Generate File Copy Queue Items
+//==============================================================================
+void FileServerConnection::copyDirectory(const QString& aSourceDir, const QString& aTargetDir)
+{
+
+}
+
+//==============================================================================
+// Move/Rename Directory - Generate File Move Queue Items
+//==============================================================================
+void FileServerConnection::moveDirectory(const QString& aSourceDir, const QString& aTargetDir)
+{
+
 }
 
 //==============================================================================

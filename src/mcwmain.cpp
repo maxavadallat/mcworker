@@ -1,7 +1,8 @@
 #include <QCoreApplication>
+#include <QDebug>
 
-#include "mcwconstants.h"
 #include "mcwfileserver.h"
+#include "mcwconstants.h"
 
 //==============================================================================
 // Main
@@ -16,7 +17,6 @@ int main(int argc, char *argv[])
 
     // Init File Server
     FileServer fileServer(asRootArg == QString(DEFAULT_OPTION_RUNASROOT) ? DEFAULT_SERVER_LISTEN_ROOT_PATH : DEFAULT_SERVER_LISTEN_PATH);
-
     // Start Server
     fileServer.startServer();
 
@@ -24,6 +24,8 @@ int main(int argc, char *argv[])
     int result = a.exec();
 
     // ...
+
+    qDebug() << "Exiting MCWorker...";
 
     // Execute Applicaiton
     return result;

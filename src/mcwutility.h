@@ -2,9 +2,39 @@
 #define UTILITY
 
 #include <QString>
+#include <QList>
+#include <QFileInfoList>
 
 #include "mcwinterface.h"
 
+//==============================================================================
+// FileSortType File Sort Type Enum
+//==============================================================================
+enum FileSortType
+{
+    EFSTName        = DEFAULT_SORT_NAME,
+    EFSTExtension   = DEFAULT_SORT_EXT,
+    EFSTType        = DEFAULT_SORT_TYPE,
+    EFSTSize        = DEFAULT_SORT_SIZE,
+    EFSTDate        = DEFAULT_SORT_DATE,
+    EFSTOwnership   = DEFAULT_SORT_OWNER,
+    EFSTPermission  = DEFAULT_SORT_PERMS,
+    EFSTAttributes  = DEFAULT_SORT_ATTR
+};
+
+//==============================================================================
+// DriveType Drive Type Enum
+//==============================================================================
+enum DriveType
+{
+    DTUnknown       = 0x0000,
+    DTNoRoot,
+    DTRemoveable,
+    DTFixed,
+    DTRemote,
+    DTCDRom,
+    DTRamDisk
+};
 
 
 // Is On Same Drive
@@ -28,9 +58,15 @@ int createDir(const QString& aDirPath);
 // Delete File
 int deleteFile(const QString& aFilePath);
 
+// Check If Dir Is Empty
+bool isDirEmpty(const QString& aDirPath);
 
 
-// Sort List
+// Compare Method Type
+typedef int (*CompareFuncType)(const QFileInfo&, const QFileInfo&, const bool&, const bool&, const bool&);
+
+// Sort File List
+void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse = false, const bool& aDirFirst = true, const bool& aCase = true);
 
 
 #endif // UTILITY

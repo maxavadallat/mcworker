@@ -191,6 +191,13 @@ protected:
     // Parse Sort Flags
     QDir::SortFlags parseSortFlags(const int& aSortFlags);
 
+    // Delete Directory - Generate File Delete Queue Items
+    void deleteDirectory(const QString& aDirPath);
+    // Copy Directory - Generate File Copy Queue Items
+    void copyDirectory(const QString& aSourceDir, const QString& aTargetDir);
+    // Move/Rename Directory - Generate File Move Queue Items
+    void moveDirectory(const QString& aSourceDir, const QString& aTargetDir);
+
 protected:
 
     // Parse Request

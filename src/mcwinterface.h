@@ -93,21 +93,20 @@
 
 
 // Sort Flags
-#define DEFAULT_SORT_NAME                       0x0001
-#define DEFAULT_SORT_EXT                        0x0002
-#define DEFAULT_SORT_TYPE                       0x0003
-#define DEFAULT_SORT_SIZE                       0x0004
-#define DEFAULT_SORT_DATE                       0x0005
-#define DEFAULT_SORT_OWNER                      0x0006
-#define DEFAULT_SORT_PERMS                      0x0007
-#define DEFAULT_SORT_ATTR                       0x0008
+#define DEFAULT_SORT_NAME                       0x0000
+#define DEFAULT_SORT_EXT                        0x0001
+#define DEFAULT_SORT_TYPE                       0x0002
+#define DEFAULT_SORT_SIZE                       0x0003
+#define DEFAULT_SORT_DATE                       0x0004
+#define DEFAULT_SORT_OWNER                      0x0005
+#define DEFAULT_SORT_PERMS                      0x0006
+#define DEFAULT_SORT_ATTR                       0x0007
 
-#define DEFAULT_SORT_ASC                        0x0010
-#define DEFAULT_SORT_DESC                       0x0020
+#define DEFAULT_SORT_REVERSE                    0x0100
 
-#define DEFAULT_SORT_DIRFIRST                   0x0100
+#define DEFAULT_SORT_DIRFIRST                   0x1000
 
-#define DEFAULT_SORT_CASE                       0x1000
+#define DEFAULT_SORT_CASE                       0x2000
 
 
 // Filter Options

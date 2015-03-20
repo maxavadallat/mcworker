@@ -92,7 +92,6 @@ void FileServerConnectionWorker::abort()
         // Reset Worker Thread
         //workerThread = NULL;
     }
-
 }
 
 //==============================================================================
@@ -133,6 +132,46 @@ void FileServerConnectionWorker::doOperation(const int& aOperation)
             fsConnection->getDirList(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString(),
                                      fsConnection->lastDataMap[DEFAULT_KEY_FILTERS].toInt(),
                                      fsConnection->lastDataMap[DEFAULT_KEY_FLAGS].toInt());
+        break;
+
+        case EFSCOTScanDir:
+            // Scan Dir
+            fsConnection->scanDirSize(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString());
+        break;
+
+        case EFSCOTTreeDir:
+            // Scan Dir Tree
+            fsConnection->scanDirTree(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString());
+        break;
+
+        case EFSCOTMakeDir:
+            // Make Dir
+            fsConnection->createDir(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString());
+        break;
+
+        case EFSCOTDeleteFile:
+            // Delete File
+            fsConnection->deleteFile(fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString());
+        break;
+
+        case EFSCOTSearchFile:
+            // Search File
+            fsConnection->searchFile(fsConnection->lastDataMap[DEFAULT_KEY_FILENAME].toString(),
+                                     fsConnection->lastDataMap[DEFAULT_KEY_PATH].toString(),
+                                     fsConnection->lastDataMap[DEFAULT_KEY_CONTENT].toString(),
+                                     fsConnection->lastDataMap[DEFAULT_KEY_OPTIONS].toInt());
+        break;
+
+        case EFSCOTCopyFile:
+            // Copy File
+            fsConnection->copyFile(fsConnection->lastDataMap[DEFAULT_KEY_SOURCE].toString(),
+                                   fsConnection->lastDataMap[DEFAULT_KEY_TARGET].toString());
+        break;
+
+        case EFSCOTMoveFile:
+            // Move/Rename File
+            fsConnection->moveFile(fsConnection->lastDataMap[DEFAULT_KEY_SOURCE].toString(),
+                                   fsConnection->lastDataMap[DEFAULT_KEY_TARGET].toString());
         break;
 
         case EFSCOTTest:
@@ -181,6 +220,7 @@ void FileServerConnectionWorker::workerThreadFinished()
     // Check Status
     if (status == EFSCWSAborted) {
         qDebug() << "FileServerConnectionWorker::workerThreadFinished - operation: " << operation << " - ABORTED, DELETING!";
+
         delete this;
     }
 }
