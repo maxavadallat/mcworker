@@ -2,6 +2,7 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include <QDebug>
+#include <QProcess>
 
 #include "mcwutility.h"
 
@@ -9,7 +10,8 @@
 //==============================================================================
 // Get File Attribute
 //==============================================================================
-int getAttributes(const QString& aFileName) {
+int getAttributes(const QString& aFileName)
+{
     // Init Attributes
     int attr = 0;
 
@@ -41,8 +43,8 @@ int getAttributes(const QString& aFileName) {
 //==============================================================================
 // Set File Attribute
 //==============================================================================
-bool setAttributes(const QString& aFileName, const int& aAttributes) {
-
+bool setAttributes(const QString& aFileName, const int& aAttributes)
+{
 #ifdef Q_OS_WIN
 
     // Check If File Exists
@@ -68,6 +70,43 @@ bool setAttributes(const QString& aFileName, const int& aAttributes) {
     return false;
 }
 
+//==============================================================================
+// Set File Permissions
+//==============================================================================
+bool setPermissions(const QString& aFilePath, const int& aPermissions)
+{
+    return QFile::setPermissions(aFilePath,(QFileDevice::Permissions)aPermissions);
+}
+
+//==============================================================================
+// Set File Permissions
+//==============================================================================
+bool setOwner(const QString& aFilePath, const QString& aOwner)
+{
+    return QProcess::execute(QString("chown %2 %1").arg(aFilePath).arg(aOwner)) == 0;
+}
+
+//==============================================================================
+// Set Date Time
+//==============================================================================
+bool setDateTime(const QString& aFilePath, const QDateTime& aDateTime)
+{
+    // Init Params
+    QStringList params;
+    // Add Modification Date Options Parameter
+    params << QString("-m");
+    // Add Date Parameter
+    params << QString("%1%2%3%4%5%6").arg(aDateTime.date().year())
+                                     .arg(aDateTime.date().month())
+                                     .arg(aDateTime.date().day())
+                                     .arg(aDateTime.time().hour())
+                                     .arg(aDateTime.time().minute())
+                                     .arg(aDateTime.time().second());
+    // Add File Path Parameter
+    params << aFilePath;
+    // Execute Touch
+    return (QProcess::execute(QString("touch"), params) == 0);
+}
 
 //==============================================================================
 // Compare QStrings Case Insensitive
@@ -396,7 +435,7 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
     // Get File List Count
     int flCount = aFileInfoList.count();
 
-    qDebug() << "sortFileList - aSortType: " << aSortType;
+    //qDebug() << "sortFileList - aSortType: " << aSortType;
 
     // Switch Sorting Method
     switch (aSortType) {

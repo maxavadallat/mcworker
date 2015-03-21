@@ -385,7 +385,6 @@ void FileServerConnection::socketReadyRead()
     QMutexLocker locker(&mutex);
 
     //qDebug() << "FileServerConnection::socketReadyRead - cID: " << cID << " - bytesAvailable: " << clientSocket->bytesAvailable();
-
     // Read Data
     lastBuffer = clientSocket->readAll();
 
@@ -407,7 +406,7 @@ void FileServerConnection::socketReadyRead()
 //==============================================================================
 void FileServerConnection::workerOperationStatusChanged(const int& aOperation, const int& aStatus)
 {
-    //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - aOperation: " << aOperation << " - aStatus: " << aStatus;
+    qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - aOperation: " << aOperation << " - aStatus: " << aStatus;
 
     // Switch Status
     switch (aStatus) {
@@ -595,6 +594,38 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
 
     // Send Finished
     sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+}
+
+//==============================================================================
+// Set File Permissions
+//==============================================================================
+void FileServerConnection::setFilePermissions(const QString& aFilePath, const int& aPermissions)
+{
+
+}
+
+//==============================================================================
+// Set File Attributes
+//==============================================================================
+void FileServerConnection::setFileAttributes(const QString& aFilePath, const int& aAttributes)
+{
+
+}
+
+//==============================================================================
+// Set File Owner
+//==============================================================================
+void FileServerConnection::setFileOwner(const QString& aFilePath, const QString& aOwner)
+{
+
+}
+
+//==============================================================================
+// Set File Date Time
+//==============================================================================
+void FileServerConnection::setFileDateTime(const QString& aFilePath, const QDateTime& aDateTime)
+{
+
 }
 
 //==============================================================================
@@ -847,7 +878,7 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
 //==============================================================================
 // Send File Operation Queue Item Found
 //==============================================================================
-void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QString& aSource, const QString& aTarget)
+void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
     // Init New Data Map
     QVariantMap newDataMap;
@@ -855,9 +886,33 @@ void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QStrin
     // Setup New Data Map
     newDataMap[DEFAULT_KEY_CID]         = cID;
     newDataMap[DEFAULT_KEY_OPERATION]   = aOp;
+    newDataMap[DEFAULT_KEY_PATH]        = aPath;
     newDataMap[DEFAULT_KEY_SOURCE]      = aSource;
     newDataMap[DEFAULT_KEY_TARGET]      = aTarget;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_QUEUE);
+
+    // ...
+
+    // Write Data With Signal
+    writeDataWithSignal(newDataMap);
+
+    // Wait
+    worker->waitCondition.wait(&worker->mutex);
+}
+
+//==============================================================================
+// Send File Search Item Item Found
+//==============================================================================
+void FileServerConnection::fileSearchItemFound(const QString& aOp, const QString& aFilePath)
+{
+    // Init New Data Map
+    QVariantMap newDataMap;
+
+    // Setup New Data Map
+    newDataMap[DEFAULT_KEY_CID]         = cID;
+    newDataMap[DEFAULT_KEY_OPERATION]   = aOp;
+    newDataMap[DEFAULT_KEY_PATH]        = aFilePath;
+    newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_SEARCH);
 
     // ...
 

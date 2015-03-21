@@ -46,11 +46,20 @@ QString getParentDir(const QString& aDirPath);
 // Get Extension
 QString getExtension(const QString& aFilePath);
 
+// Get File Attributes
+int getAttributes(const QString& aFilePath);
+
 // Set File Attributes
 bool setAttributes(const QString& aFilePath, const int& aAttributes);
 
-// Get File Attributes
-int getAttributes(const QString& aFilePath);
+// Set File Permissions
+bool setPermissions(const QString& aFilePath, const int& aPermissions);
+
+// Set File Permissions
+bool setOwner(const QString& aFilePath, const QString& aOwner);
+
+// Set Date Time
+bool setDateTime(const QString& aFilePath, const QDateTime& aDateTime);
 
 // Create Dir
 int createDir(const QString& aDirPath);
@@ -60,6 +69,7 @@ int deleteFile(const QString& aFilePath);
 
 // Check If Dir Is Empty
 bool isDirEmpty(const QString& aDirPath);
+
 
 
 // Compare Method Type

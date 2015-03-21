@@ -126,9 +126,13 @@ protected slots:
 
     // Send File Operation Queue Item Found
     void fileOpQueueItemFound(const QString& aOp,
+                              const QString& aPath,
                               const QString& aSource,
                               const QString& aTarget);
 
+    // Send File Search Item Item Found
+    void fileSearchItemFound(const QString& aOp,
+                             const QString& aFilePath);
 
 
 protected slots: // QLocalSocket
@@ -165,6 +169,15 @@ protected slots: // FileServerConnectionWorker
     void createDir(const QString& aDirPath);
     // Delete File/Directory
     void deleteFile(const QString& aFilePath);
+
+    // Set File Permissions
+    void setFilePermissions(const QString& aFilePath, const int& aPermissions);
+    // Set File Attributes
+    void setFileAttributes(const QString& aFilePath, const int& aAttributes);
+    // Set File Owner
+    void setFileOwner(const QString& aFilePath, const QString& aOwner);
+    // Set File Date Time
+    void setFileDateTime(const QString& aFilePath, const QDateTime& aDateTime);
 
     // Scan Directory Size
     void scanDirSize(const QString& aDirPath);
