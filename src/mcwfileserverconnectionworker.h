@@ -19,8 +19,11 @@ enum FSCWStatusType
     EFSCWSIdle      = 0,
     EFSCWSBusy,
     EFSCWSWaiting,
+    EFSCWSCancelling,
+    EFSCWSAborting,
     EFSCWSAborted,
     EFSCWSFinished,
+    EFSCWSExiting,
     EFSCWSError     = 0xffff
 };
 
@@ -36,7 +39,9 @@ public:
     explicit FileServerConnectionWorker(FileServerConnection* aConnection, QObject* aParent = NULL);
 
     // Start
-    void start(const int& aOperation);
+    void start();
+    // Cancel
+    void cancel();
     // Abort
     void abort();
 
@@ -46,7 +51,7 @@ public:
 signals:
 
     // Start Operation Signal
-    void startOperation(const int& aOperation);
+    void startOperation();
 
     // Operation Status Update Signal
     void operationStatusChanged(const int& aOperation, const int& aStatus);
@@ -56,16 +61,24 @@ signals:
     // Write Data Signal
     void writeData(const QVariantMap& aData);
 
+    // Thread Started Signal
+    void threadStarted();
+    // Thread Finished Signal
+    void threadFinished();
+
 protected slots:
 
     // Do Operation
-    void doOperation(const int& aOperation);
+    void doOperation();
 
     // Set Status
     void setStatus(const FSCWStatusType& aStatus);
 
     // Worker Thread Finished
     void workerThreadFinished();
+
+    // Status To String
+    QString statusToString(const FSCWStatusType& aStatus);
 
 private:
     friend class FileServerConnection;

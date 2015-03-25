@@ -1,7 +1,9 @@
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDebug>
 
 #include "mcwfileserver.h"
+#include "mcwutility.h"
 #include "mcwconstants.h"
 
 //==============================================================================
@@ -9,6 +11,11 @@
 //==============================================================================
 int main(int argc, char *argv[])
 {
+
+    qDebug() << "================================================================================";
+    qDebug() << "Starting MCWorker...";
+    qDebug() << "================================================================================";
+
     // Init Application
     QCoreApplication a(argc, argv);
 
@@ -25,7 +32,9 @@ int main(int argc, char *argv[])
 
     // ...
 
+    qDebug() << "================================================================================";
     qDebug() << "Exiting MCWorker...";
+    qDebug() << "================================================================================";
 
     // Execute Applicaiton
     return result;

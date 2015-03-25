@@ -3,9 +3,22 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QProcess>
+#include <QThread>
+#include <QStringList>
 
+#include <cstdio>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <unistd.h>
+#include <string>
+#include <sstream>
+
+#include "mcwconstants.h"
 #include "mcwutility.h"
 
+// Global Mutex
+QMutex  globalMutex;
 
 //==============================================================================
 // Get File Attribute
@@ -83,7 +96,7 @@ bool setPermissions(const QString& aFilePath, const int& aPermissions)
 //==============================================================================
 bool setOwner(const QString& aFilePath, const QString& aOwner)
 {
-    return QProcess::execute(QString("chown %2 %1").arg(aFilePath).arg(aOwner)) == 0;
+    return QProcess::execute(QString(DEFAULT_CHANGE_OWNER_COMMAND_LINE_TEMPLATE).arg(aOwner).arg(aFilePath)) == 0;
 }
 
 //==============================================================================
@@ -96,16 +109,61 @@ bool setDateTime(const QString& aFilePath, const QDateTime& aDateTime)
     // Add Modification Date Options Parameter
     params << QString("-m");
     // Add Date Parameter
-    params << QString("%1%2%3%4%5%6").arg(aDateTime.date().year())
-                                     .arg(aDateTime.date().month())
-                                     .arg(aDateTime.date().day())
-                                     .arg(aDateTime.time().hour())
-                                     .arg(aDateTime.time().minute())
-                                     .arg(aDateTime.time().second());
+    params << QString(DEFAULT_CHANGE_DATE_COMMAND_LINE_TEMPLATE).arg(aDateTime.date().year())
+                                                                .arg(aDateTime.date().month())
+                                                                .arg(aDateTime.date().day())
+                                                                .arg(aDateTime.time().hour())
+                                                                .arg(aDateTime.time().minute())
+                                                                .arg(aDateTime.time().second());
     // Add File Path Parameter
     params << aFilePath;
     // Execute Touch
-    return (QProcess::execute(QString("touch"), params) == 0);
+    return (QProcess::execute(QString(DEFAULT_CHANGE_DATE_COMMAND_NAME), params) == 0);
+}
+
+//==============================================================================
+// Create Dir
+//==============================================================================
+int createDir(const QString& aDirPath)
+{
+    return QProcess::execute(QString(DEFAULT_CREATE_DIR_COMMAND_LINE_TEMPLATE).arg(aDirPath));
+}
+
+//==============================================================================
+// Delete File
+//==============================================================================
+int deleteFile(const QString& aFilePath)
+{
+    return QProcess::execute(QString(DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE).arg(aFilePath));
+}
+
+//==============================================================================
+// Check If Is Dir
+//==============================================================================
+bool isDir(const QString& aDirPath)
+{
+    return getDirFileList(aDirPath).indexOf(".") >= 0;
+}
+
+//==============================================================================
+// Check If Dir Is Empty
+//==============================================================================
+bool isDirEmpty(const QString& aDirPath)
+{
+    return getDirFileList(aDirPath).count() == 2;
+}
+
+//==============================================================================
+// Get Dir File List
+//==============================================================================
+QStringList getDirFileList(const QString& aDirPath, const bool& aShowHidden)
+{
+    // Init New Path
+    QString newPath = aDirPath;
+    // Init Dir
+    QDir dir(newPath.replace("~/", QDir::homePath() + "/"));
+
+    return dir.entryList(aShowHidden ? (QDir::AllEntries | QDir::Hidden | QDir::System) : QDir::AllEntries);
 }
 
 //==============================================================================
@@ -450,7 +508,6 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
         case EFSTAttributes:    quickSort(aFileInfoList, 0, flCount-1, attrSort, aReverse, aDirFirst, aCase); break;
     }
 }
-
 
 
 

@@ -121,8 +121,6 @@ void FileServer::clientActivity(const unsigned int& aID)
 //==============================================================================
 void FileServer::clientClosed(const unsigned int& aID)
 {
-    qDebug() << "FileServer::clientClosed - aID: " << aID;
-
     // Get Clients Count
     int cCount = clientList.count();
 
@@ -133,6 +131,8 @@ void FileServer::clientClosed(const unsigned int& aID)
 
         // Check Client ID
         if (client->cID == aID) {
+            qDebug() << "FileServer::clientClosed - aID: " << aID;
+
             // Remove Client
             clientList.removeAt(i);
 
@@ -221,21 +221,21 @@ void FileServer::restartIdleCountdown()
 //==============================================================================
 void FileServer::closeAllConnections()
 {
-    qDebug() << "FileServer::closeAllConnections";
-
     // Get Clients Count
     int cCount = clientList.count();
 
-    // Go Thru Clients
-    for (int i=0; i<cCount; ++i) {
-        // Get Client
-        FileServerConnection* client = clientList[i];
-        // Close Client
-        client->close();
-    }
+    // Check Count
+    if (cCount > 0) {
+        qDebug() << "FileServer::closeAllConnections";
 
-    // Clear Client List
-    //clientList.clear();
+        // Go Thru Clients
+        for (int i=cCount-1; i>=0; i--) {
+            // Get Client
+            FileServerConnection* client = clientList[i];
+            // Close Client
+            client->close();
+        }
+    }
 }
 
 //==============================================================================

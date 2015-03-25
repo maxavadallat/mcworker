@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QList>
+#include <QDateTime>
 #include <QFileInfoList>
 
 #include "mcwinterface.h"
@@ -36,6 +37,47 @@ enum DriveType
     DTRamDisk
 };
 
+//==============================================================================
+// File List Item Type Class
+//==============================================================================
+class FileListItem
+{
+public:
+    // Constructor
+    explicit FileListItem(const QString& aPath, const QString& aFileName, const bool& aIsDir);
+    // File Path
+    QString     filePath;
+    // File Name
+    QString     fileName;
+    // Base Name
+    QString     baseName;
+    // Suffix
+    QString     suffix;
+    // Type
+    QString     type;
+    // Size
+    qint64      size;
+    // Last Modified
+    QDateTime   lastModified;
+    // Owner
+    QString     owner;
+    // Permissions
+    int         permissions;
+    // Attributes
+    int         attributes;
+    // Is Dir
+    bool        isDir;
+    // Is Link
+    bool        isSymLink;
+};
+
+
+//==============================================================================
+// File List Type
+//==============================================================================
+typedef QList<FileListItem> FileList;
+
+
 
 // Is On Same Drive
 bool isOnSameDrive(const QString& aPathOne, const QString& aPathTwo);
@@ -67,8 +109,14 @@ int createDir(const QString& aDirPath);
 // Delete File
 int deleteFile(const QString& aFilePath);
 
+// Check If Is Dir
+bool isDir(const QString& aDirPath);
+
 // Check If Dir Is Empty
 bool isDirEmpty(const QString& aDirPath);
+
+// Get Dir List
+QStringList getDirFileList(const QString& aDirPath, const bool& aShowHidden = true);
 
 
 

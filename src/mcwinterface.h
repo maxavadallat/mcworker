@@ -82,9 +82,11 @@
 #define DEFAULT_RESPONSE_DIRTREE                "DTR"
 #define DEFAULT_RESPONSE_SEARCH                 "SRCH"
 #define DEFAULT_RESPONSE_QUEUE                  "QLI"
-#define DEFAULT_RESPONSE_CONFIRM                "CNF"
+#define DEFAULT_RESPONSE_START                  "STRT"
 #define DEFAULT_RESPONSE_PROGRESS               "PRG"
+#define DEFAULT_RESPONSE_CONFIRM                "CNF"
 #define DEFAULT_RESPONSE_READY                  "RDY"
+#define DEFAULT_RESPONSE_ABORT                  "ABRT"
 #define DEFAULT_RESPONSE_ERROR                  "ERR"
 
 // Error Codes

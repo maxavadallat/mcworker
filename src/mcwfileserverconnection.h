@@ -40,7 +40,7 @@ public:
     explicit FileServerConnection(const unsigned int& aCID, QLocalSocket* aLocalSocket, QObject* aParent = NULL);
 
     // Abort Current Operation
-    void abort();
+    void abort(const bool& aAbortSocket = false);
     // Close Connection
     void close();
 
@@ -61,12 +61,12 @@ protected slots:
     // Init
     void init();
     // Create Worker
-    void createWorker();
+    void createWorker(const bool& aStart = true);
     // Shut Down
     void shutDown();
 
-    // Response
-    void setResponse(const int& aResponse, const bool& aWake = true);
+    // Handle Response
+    void handleResponse(const QString& aOperation, const int& aResponse, const bool& aWake = true);
     // Set Options
     void setOptions(const int& aOptions, const bool& aWake = true);
 
@@ -84,6 +84,12 @@ protected slots:
     // Test Run
     void testRun();
 
+    // Send File Operation Started
+    void sendStarted(const QString& aOp,
+                     const QString& aPath,
+                     const QString& aSource,
+                     const QString& aTarget);
+
     // Send File Operation Progress
     void sendProgress(const QString& aOp,
                       const QString& aCurrFilePath,
@@ -98,6 +104,12 @@ protected slots:
                       const QString& aPath,
                       const QString& aSource,
                       const QString& aTarget);
+
+    // Send File Operation Aborted
+    void sendAborted(const QString& aOp,
+                     const QString& aPath,
+                     const QString& aSource,
+                     const QString& aTarget);
 
     // Send File Operation Error
     int sendError(const QString& aOp,
@@ -162,6 +174,11 @@ protected slots: // FileServerConnectionWorker
     // Operation Need Confirm Slot
     void workerOperationNeedConfirm(const int& aOperation, const int& aCode);
 
+    // Worker Thread Started Slot
+    void workerThreadStarted();
+    // Worker Thread Finished Slot
+    void workerThreadFinished();
+
     // Get Dir List
     void getDirList(const QString& aDirPath, const int& aFilters, const int& aSortFlags);
 
@@ -213,8 +230,17 @@ protected:
 
 protected:
 
+    // Process Last Buffer
+    void processLastBuffer();
+
+    // Process Request
+    void processRequest(const QVariantMap& aDataMap);
+
+    // Process Operation Queue
+    bool processOperationQueue();
+
     // Parse Request
-    void parseRequest(const QVariantMap& aRequest);
+    void parseRequest(const QVariantMap& aDataMap);
 
 private:
     friend class FileServer;
@@ -225,6 +251,9 @@ private:
 
     // Client ID Is Sent
     bool                        cIDSent;
+
+    // Deleting
+    bool                        deleting;
 
     // Local Socket
     QLocalSocket*               clientSocket;
@@ -237,7 +266,7 @@ private:
     // Last Buffer
     QByteArray                  lastBuffer;
     // Last Map
-    QVariantMap                 lastDataMap;
+    QVariantMap                 lastOperationDataMap;
 
     // Mutex
     QMutex                      mutex;
@@ -251,7 +280,7 @@ private:
     // Operation
     QString                     operation;
     // Operation ID
-    int                         opID;
+    //int                         opID;
     // Options
     int                         options;
     // Filters
@@ -261,8 +290,8 @@ private:
     // User Response
     int                         response;
 
-    // Dir Path
-    QString                     dirPath;
+    // Path
+    QString                     path;
     // File Path
     QString                     filePath;
     // Source
@@ -270,6 +299,8 @@ private:
     // Target
     QString                     target;
 
+    // Pending Operations
+    QList<QVariantMap>          pendingOperations;
 };
 
 #endif // FILESERVERCONNECTION_H

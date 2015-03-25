@@ -25,7 +25,8 @@ SOURCES                 += src/mcwmain.cpp \
                         src/mcwfileserver.cpp \
                         src/mcwutility.cpp \
                         src/mcwfileserverconnection.cpp \
-                        src/mcwfileserverconnectionworker.cpp
+                        src/mcwfileserverconnectionworker.cpp \
+                        src/mcwfileserverconnectionstream.cpp
 
 
 # Headera
@@ -35,7 +36,8 @@ HEADERS                 += \
                         src/mcwfileserver.h \
                         src/mcwinterface.h \
                         src/mcwfileserverconnection.h \
-                        src/mcwfileserverconnectionworker.h
+                        src/mcwfileserverconnectionworker.h \
+                        src/mcwfileserverconnectionstream.h
 
 # Other Files
 OTHER_FILES             += \
