@@ -40,6 +40,10 @@ public:
 
     // Start
     void start();
+    // Wait
+    void wait();
+    // Wake Up
+    void wakeUp(const bool& aWakeAll = false);
     // Cancel
     void cancel();
     // Abort
@@ -54,9 +58,7 @@ signals:
     void startOperation();
 
     // Operation Status Update Signal
-    void operationStatusChanged(const int& aOperation, const int& aStatus);
-    // Operation Need Confirm Signal
-    void operationNeedConfirm(const int& aOperation, const int& aCode);
+    void operationStatusChanged(const int& aStatus);
 
     // Write Data Signal
     void writeData(const QVariantMap& aData);
@@ -97,9 +99,6 @@ private:
 
     // Status
     FSCWStatusType          status;
-
-    // Operation
-    int                     operation;
 };
 
 #endif // FILESERVERCONNECTIONWORKER_H

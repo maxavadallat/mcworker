@@ -66,7 +66,7 @@ protected slots:
     void shutDown();
 
     // Handle Response
-    void handleResponse(const QString& aOperation, const int& aResponse, const bool& aWake = true);
+    void handleResponse(const int& aResponse, const bool& aWake = true);
     // Set Options
     void setOptions(const int& aOptions, const bool& aWake = true);
 
@@ -170,9 +170,7 @@ protected slots: // QLocalSocket
 protected slots: // FileServerConnectionWorker
 
     // Operation Status Update Slot
-    void workerOperationStatusChanged(const int& aOperation, const int& aStatus);
-    // Operation Need Confirm Slot
-    void workerOperationNeedConfirm(const int& aOperation, const int& aCode);
+    void workerOperationStatusChanged(const int& aStatus);
 
     // Worker Thread Started Slot
     void workerThreadStarted();

@@ -7,7 +7,7 @@
 #include "mcwconstants.h"
 
 // Check Aborting Macro
-#define __CHECH_ABORTING    if (status == EFSCWSAborting || status == EFSCWSAborted) break
+#define __CHECK_ABORTING    if (status == EFSCWSAborting || status == EFSCWSAborted) break
 
 //==============================================================================
 // Constructor
@@ -17,7 +17,6 @@ FileServerConnectionWorker::FileServerConnectionWorker(FileServerConnection* aCo
     , fsConnection(aConnection)
     , workerThread(new QThread())
     , status(EFSCWSUnknown)
-    , operation(-1)
 {
     qDebug() << "FileServerConnectionWorker::FileServerConnectionWorker";
 
@@ -62,6 +61,62 @@ void FileServerConnectionWorker::start()
 }
 
 //==============================================================================
+// Wait
+//==============================================================================
+void FileServerConnectionWorker::wait()
+{
+    // Check File Server Connection
+    if (!fsConnection) {
+        qWarning() << "FileServerConnectionWorker::start - NO FILE SERVER CONNECTION!!";
+        return;
+    }
+
+    // Check Worker Thread
+    if (!workerThread) {
+        qWarning() << "FileServerConnectionWorker::start - NO WORKER THREAD!!";
+        return;
+    }
+
+    qDebug() << "FileServerConnectionWorker::wait - operation: " << fsConnection->operation;
+
+    // Set Status
+    setStatus(EFSCWSWaiting);
+
+    // Wait For Wait Condition
+    waitCondition.wait(&mutex);
+}
+
+//==============================================================================
+// Wake Up
+//==============================================================================
+void FileServerConnectionWorker::wakeUp(const bool& aWakeAll)
+{
+    // Check File Server Connection
+    if (!fsConnection) {
+        qWarning() << "FileServerConnectionWorker::start - NO FILE SERVER CONNECTION!!";
+        return;
+    }
+
+    // Check Worker Thread
+    if (!workerThread) {
+        qWarning() << "FileServerConnectionWorker::start - NO WORKER THREAD!!";
+        return;
+    }
+
+    // Check Wake All
+    if (aWakeAll) {
+        // Wake All
+        waitCondition.wakeAll();
+    } else {
+        // Wake One
+        waitCondition.wakeOne();
+    }
+
+    // Set Status
+    setStatus(EFSCWSBusy);
+}
+
+//==============================================================================
 // Cancel
 //==============================================================================
 void FileServerConnectionWorker::cancel()
@@ -72,7 +127,7 @@ void FileServerConnectionWorker::cancel()
         return;
     }
 
-    qDebug() << "FileServerConnectionWorker::cancel - operation: " << operation;
+    qDebug() << "FileServerConnectionWorker::cancel - operation: " << fsConnection->operation;
 
     // Check Status
     if (status == EFSCWSWaiting) {
@@ -97,7 +152,7 @@ void FileServerConnectionWorker::abort()
 {
     // Check File Server Connection
     if (!fsConnection) {
-        qWarning() << "FileServerConnectionWorker::abort - operation: " << operation << " - NO FILE SERVER CONNECTION!!";
+        qWarning() << "FileServerConnectionWorker::abort - NO FILE SERVER CONNECTION!!";
         return;
     }
 
@@ -107,7 +162,7 @@ void FileServerConnectionWorker::abort()
         return;
     }
 
-    qDebug() << "FileServerConnectionWorker::abort";
+    qDebug() << "FileServerConnectionWorker::abort - operation: " << fsConnection->operation;;
 
     // Set Status
     setStatus(EFSCWSAborting);
@@ -137,42 +192,48 @@ void FileServerConnectionWorker::doOperation()
     qDebug() << "--------------------------------------------------------------------------------";
 
     // Init Mutex Locker
-    //QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutex);
 
     // Forever...
     forever {
+
+
         // Check File Server Connection
         if (!fsConnection) {
             qWarning() << "FileServerConnectionWorker::doOperation - NO FILE SERVER CONNECTION!!";
             break;
         }
 
-        // Check Status
-        if (status == EFSCWSAborting || status == EFSCWSAborted) {
-            qDebug() << "FileServerConnectionWorker::doOperation - ABORTING...";
-            break;
-        }
+        __CHECK_ABORTING;
 
         // Set Status
         setStatus(EFSCWSBusy);
 
-        __CHECH_ABORTING;
+        __CHECK_ABORTING;
 
         // Process Operation Queue
-        //bool emptyQeueue = fsConnection->processOperationQueue();
+        bool emptyQeueue = fsConnection->processOperationQueue();
 
-        qDebug() << "FileServerConnectionWorker::doOperation - TICK";
+        __CHECK_ABORTING;
 
-        __CHECH_ABORTING;
+        // Sleep
+        QThread::currentThread()->sleep(1);
+
+        __CHECK_ABORTING;
 
         // Set Status
         setStatus(EFSCWSFinished);
 
-        // Sleep
-        QThread::currentThread()->msleep(1000);
+        __CHECK_ABORTING;
 
-        // Wait
-        //waitCondition.wait(&mutex);
+        // Check Empty Queue
+        if (emptyQeueue)
+        {
+            // Wait
+            waitCondition.wait(&mutex);
+        }
+
+        qDebug() << "FileServerConnectionWorker::doOperation - TICK";
     }
 
     qDebug() << "--------------------------------------------------------------------------------";
@@ -209,7 +270,7 @@ void FileServerConnectionWorker::setStatus(const FSCWStatusType& aStatus)
         status = aStatus;
 
         // Emit Status Changed Signal
-        emit operationStatusChanged(operation, status);
+        emit operationStatusChanged(status);
     }
 }
 

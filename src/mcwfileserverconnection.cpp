@@ -22,7 +22,7 @@
 #include "mcwconstants.h"
 
 
-#define __CHECH_ABORTING     if (abortFlag) return
+#define __CHECK_ABORTING     if (abortFlag) return
 
 
 
@@ -108,8 +108,7 @@ void FileServerConnection::createWorker(const bool& aStart)
         worker = new FileServerConnectionWorker(this);
 
         // Connect Signals
-        connect(worker, SIGNAL(operationStatusChanged(int,int)), this, SLOT(workerOperationStatusChanged(int,int)));
-        connect(worker, SIGNAL(operationNeedConfirm(int,int)), this, SLOT(workerOperationNeedConfirm(int,int)));
+        connect(worker, SIGNAL(operationStatusChanged(int)), this, SLOT(workerOperationStatusChanged(int)));
         connect(worker, SIGNAL(writeData(QVariantMap)), this, SLOT(writeData(QVariantMap)), Qt::BlockingQueuedConnection);
         connect(worker, SIGNAL(threadStarted()), this, SLOT(workerThreadStarted()));
         connect(worker, SIGNAL(threadFinished()), this, SLOT(workerThreadFinished()));
@@ -208,25 +207,21 @@ void FileServerConnection::shutDown()
 //==============================================================================
 // Handle Response
 //==============================================================================
-void FileServerConnection::handleResponse(const QString& aOperation, const int& aResponse, const bool& aWake)
+void FileServerConnection::handleResponse(const int& aResponse, const bool& aWake)
 {
-    // Check Operation
-    if (operation != aOperation) {
-        qWarning() << "FileServerConnection::handleResponse - aOperation " << aOperation << " - aResponse: " << aResponse << " - INVALID OPERATION!!";
-        return;
-    }
-
-    qDebug() << "FileServerConnection::handleResponse - aOperation " << aOperation << " - aResponse: " << aResponse;
-
-    // Set Reponse
-    response = aResponse;
-
     // Check Wake
-    if (worker && aWake) {
+    if (worker && worker->status == EFSCWSWaiting && aWake) {
+        qDebug() << "FileServerConnection::handleResponse - operation " << operation << " - aResponse: " << aResponse;
+
+        // Set Reponse
+        response = aResponse;
+
         // Wake One Wait Condition
-        worker->waitCondition.wakeOne();
-        // Set Worker Status
-        worker->setStatus(EFSCWSBusy);
+        worker->wakeUp();
+    } else {
+
+        // ...
+
     }
 }
 
@@ -243,9 +238,7 @@ void FileServerConnection::setOptions(const int& aOptions, const bool& aWake)
     // Check Wake
     if (worker && aWake) {
         // Wake One Wait Condition
-        worker->waitCondition.wakeOne();
-        // Set Worker Status
-        worker->setStatus(EFSCWSBusy);
+        worker->wakeUp();
     }
 }
 
@@ -259,7 +252,7 @@ void FileServerConnection::handleAcknowledge()
     // Check Wake
     if (worker) {
         // Wake One Wait Condition
-        worker->waitCondition.wakeOne();
+        worker->wakeUp();
     }
 }
 
@@ -484,7 +477,7 @@ void FileServerConnection::processLastBuffer()
         case EFSCOTResponse:
             qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - RESPONSE!";
             // Set Response
-            handleResponse(newVariantMap[DEFAULT_KEY_OPERATION].toString(), newVariantMap[DEFAULT_KEY_RESPONSE].toInt());
+            handleResponse(newVariantMap[DEFAULT_KEY_RESPONSE].toInt());
         break;
 
         default:
@@ -539,10 +532,10 @@ bool FileServerConnection::processOperationQueue()
         // Parse Request
         parseRequest(pendingOperations.takeFirst());
 
-        return true;
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 //==============================================================================
@@ -641,9 +634,9 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
 //==============================================================================
 // Operation Status Update Slot
 //==============================================================================
-void FileServerConnection::workerOperationStatusChanged(const int& aOperation, const int& aStatus)
+void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
 {
-    qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - aOperation: " << aOperation << " - aStatus: " << worker->statusToString((FSCWStatusType)aStatus);
+    qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - aStatus: " << worker->statusToString((FSCWStatusType)aStatus);
 
     // Switch Status
     switch (aStatus) {
@@ -670,17 +663,6 @@ void FileServerConnection::workerOperationStatusChanged(const int& aOperation, c
         default:
         break;
     }
-
-    // ...
-
-}
-
-//==============================================================================
-// Operation Need Confirm Slot
-//==============================================================================
-void FileServerConnection::workerOperationNeedConfirm(const int& aOperation, const int& aCode)
-{
-    qDebug() << "FileServerConnection::workerOperationNeedConfirm - cID: " << cID << " - aOperation: " << aOperation << " - aCode: " << aCode;
 
     // ...
 
@@ -742,7 +724,7 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     QStringList eiList = getDirFileList(localPath, aFilters & DEFAULT_FILTER_SHOW_HIDDEN);
 
     // Check Abort Flag
-    __CHECH_ABORTING;
+    __CHECK_ABORTING;
 
     // Get Dir First
     bool dirFirst           = aSortFlags & DEFAULT_SORT_DIRFIRST;
@@ -758,7 +740,7 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     //sortFileList(eiList, sortType, reverse, dirFirst, caseSensitive);
 
     // Check Abort Flag
-    __CHECH_ABORTING;
+    __CHECK_ABORTING;
 
     // Get Entry Info List Count
     int eilCount = eiList.count();
@@ -768,7 +750,7 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     // Go Thru List
     for (int i=0; i<eilCount; ++i) {
         // Check Abort Flag
-        __CHECH_ABORTING;
+        __CHECK_ABORTING;
 
         // Get File Name
         QString fileName = eiList[i];
@@ -793,13 +775,13 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
         sendDirListItemFound(localPath, fileName);
     }
 
-    __CHECH_ABORTING;
+    __CHECK_ABORTING;
 
     // Get End Time
     QDateTime endTime = QDateTime::currentDateTimeUtc();
     qDebug() << "#### ls -1a " << localPath << " - duration: " << startTime.msecsTo(endTime) << "msecs";
 
-    __CHECH_ABORTING;
+    __CHECK_ABORTING;
 
     // Send Finished
     sendFinished(DEFAULT_OPERATION_LIST_DIR, localPath, "", "");
@@ -998,13 +980,15 @@ void FileServerConnection::testRun()
 
     // Forever !!
     forever {
-        __CHECH_ABORTING;
+        __CHECK_ABORTING;
 
         // Dec Counter
         counter--;
 
         // Check Counter
         if (counter <= 0) {
+            __CHECK_ABORTING;
+
             // Generate New Random Count
             randomCount = qrand() % 7 + 1;
             // Reset Counter
@@ -1016,7 +1000,7 @@ void FileServerConnection::testRun()
             //worker->waitCondition.wait(&worker->mutex);
             sendfileOpNeedConfirm(DEFAULT_OPERATION_TEST, 0, "", "", "");
 
-            __CHECH_ABORTING;
+            __CHECK_ABORTING;
 
             qDebug() << "FileServerConnection::testRun - cID: " << cID << " - Response Received: " << response;
 
@@ -1027,7 +1011,7 @@ void FileServerConnection::testRun()
             // Emit Activity Signal
             emit activity(cID);
 
-            __CHECH_ABORTING;
+            __CHECK_ABORTING;
 
             // Sleep
             currentThread->msleep(1000);
@@ -1140,7 +1124,6 @@ void FileServerConnection::sendAborted(const QString& aOp, const QString& aPath,
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
-    //writeData(newDataMap);
 }
 
 //==============================================================================
@@ -1169,8 +1152,8 @@ int FileServerConnection::sendError(const QString& aOp, const QString& aPath, co
 
     // Check Wait
     if (aWait) {
-        // Wait For Wait Condition
-        worker->waitCondition.wait(&worker->mutex);
+        // Wait
+        worker->wait();
     }
 
     return response;
@@ -1198,8 +1181,8 @@ void FileServerConnection::sendfileOpNeedConfirm(const QString& aOp, const int& 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait For Wait Condition
-    worker->waitCondition.wait(&worker->mutex);
+    // Wait
+    worker->wait();
 }
 
 //==============================================================================
@@ -1243,7 +1226,7 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->waitCondition.wait(&worker->mutex);
+    worker->wait();
 }
 
 //==============================================================================
@@ -1268,7 +1251,7 @@ void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QStrin
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->waitCondition.wait(&worker->mutex);
+    worker->wait();
 }
 
 //==============================================================================
@@ -1291,7 +1274,7 @@ void FileServerConnection::fileSearchItemFound(const QString& aOp, const QString
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->waitCondition.wait(&worker->mutex);
+    worker->wait();
 }
 
 //==============================================================================
