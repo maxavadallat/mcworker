@@ -417,7 +417,7 @@ void FileServerConnection::socketReadyRead()
     // Mutex Lock
     QMutexLocker locker(&mutex);
 
-    qDebug() << "FileServerConnection::socketReadyRead - cID: " << cID << " - bytesAvailable: " << clientSocket->bytesAvailable();
+    //qDebug() << "FileServerConnection::socketReadyRead - cID: " << cID << " - bytesAvailable: " << clientSocket->bytesAvailable();
 
     // Read Data
     lastBuffer = clientSocket->readAll();
@@ -469,7 +469,7 @@ void FileServerConnection::processLastBuffer()
         break;
 
         case EFSCOTAcknowledge:
-            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
+            //qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
             // Handle Acknowledge
             handleAcknowledge();
         break;
@@ -493,7 +493,7 @@ void FileServerConnection::processLastBuffer()
 //==============================================================================
 void FileServerConnection::processRequest(const QVariantMap& aDataMap)
 {
-    qDebug() << "FileServerConnection::processRequest - cID: " << cID;
+    //qDebug() << "FileServerConnection::processRequest - cID: " << cID << " - worker->status: " << worker->statusToString(worker->status);
 
     // Pushing New Data To Pending Operations
     pendingOperations << aDataMap;
@@ -502,16 +502,23 @@ void FileServerConnection::processRequest(const QVariantMap& aDataMap)
     if (worker) {
         // Check Worker Status If Busy
         if (worker->status == EFSCWSBusy) {
+
             // Cancel Worker
             worker->cancel();
+
         // Check Worker Status If Finished
         } if (worker->status == EFSCWSFinished) {
+
             // Wake Up Worker
-            worker->waitCondition.wakeOne();
+            worker->wakeUp();
+
+        } else {
+
+            qWarning() << "FileServerConnection::processRequest - cID: " << cID << " - UNHANDLED WORKER STATUS: " << worker->statusToString(worker->status);
+
+            // ...
+
         }
-
-        // ...
-
     } else {
         // Create Worker
         createWorker();
@@ -521,16 +528,21 @@ void FileServerConnection::processRequest(const QVariantMap& aDataMap)
 }
 
 //==============================================================================
-// Process Operation Queue
+// Process Operation Queue - Returns true if Queue Empty
 //==============================================================================
 bool FileServerConnection::processOperationQueue()
 {
     // Check Pending Operations
     if (pendingOperations.count() > 0) {
-        qDebug() << "FileServerConnection::processOperationQueue - cID: " << cID;
+        //qDebug() << "FileServerConnection::processOperationQueue - cID: " << cID;
 
         // Parse Request
         parseRequest(pendingOperations.takeFirst());
+
+        // Check Pending Operations After Taking First Item
+        if (pendingOperations.count() <= 0) {
+            return true;
+        }
 
         return false;
     }
@@ -575,18 +587,17 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
             testRun();
         break;
 
-/*
         case EFSCOTListDir:
             // Get Dir List
-            fsConnection->getDirList(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString(),
-                                     fsConnection->lastOperationDataMap[DEFAULT_KEY_FILTERS].toInt(),
-                                     fsConnection->lastOperationDataMap[DEFAULT_KEY_FLAGS].toInt());
+            getDirList(path, filters, sortFlags);
         break;
 
         case EFSCOTScanDir:
             // Scan Dir
-            fsConnection->scanDirSize(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString());
+            scanDirSize(path);
         break;
+
+/*
 
         case EFSCOTTreeDir:
             // Scan Dir Tree
@@ -624,7 +635,6 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
         break;
 
 */
-
         default:
             qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - operation: " << operation << " - UNHANDLED!!";
         break;
@@ -632,15 +642,27 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
 }
 
 //==============================================================================
+// Check If Is Queue Empty
+//==============================================================================
+bool FileServerConnection::isQueueEmpty()
+{
+    return pendingOperations.count() <= 0;
+}
+
+//==============================================================================
 // Operation Status Update Slot
 //==============================================================================
 void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
 {
-    qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - aStatus: " << worker->statusToString((FSCWStatusType)aStatus);
+    //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - aStatus: " << worker->statusToString((FSCWStatusType)aStatus);
 
     // Switch Status
     switch (aStatus) {
         case EFSCWSIdle:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - IDLE";
+
+            // ...
+
         break;
 
         case EFSCWSBusy:
@@ -650,14 +672,39 @@ void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
         break;
 
         case EFSCWSFinished:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - FINISHED!";
+
             // Reset Abort Flag
             abortFlag = false;
+
+        break;
+
+        case EFSCWSCancelling:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - CANCELLING!";
+
+            // ...
+
+        break;
+
+        case EFSCWSAborting:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTING!";
+
+            // ...
+
         break;
 
         case EFSCWSAborted:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTED!";
+
+            // ...
+
         break;
 
         case EFSCWSError:
+            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ERROR!";
+
+            // ...
+
         break;
 
         default:
@@ -707,7 +754,7 @@ void FileServerConnection::workerThreadFinished()
 //==============================================================================
 void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilters, const int& aSortFlags)
 {
-    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - aFilters: " << aFilters << " - aSortFlags: " << aSortFlags;
+    //qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - aFilters: " << aFilters << " - aSortFlags: " << aSortFlags;
 
     // Init Local Path
     QString localPath = aDirPath;
@@ -718,10 +765,13 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     }
 
     // Get Start Time
-    QDateTime startTime = QDateTime::currentDateTimeUtc();
+    //QDateTime startTime = QDateTime::currentDateTimeUtc();
 
-    // Get Dir File List
-    QStringList eiList = getDirFileList(localPath, aFilters & DEFAULT_FILTER_SHOW_HIDDEN);
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Get File Info List
+    QFileInfoList fiList = getDirFileInfoList(localPath, aFilters & DEFAULT_FILTER_SHOW_HIDDEN);
 
     // Check Abort Flag
     __CHECK_ABORTING;
@@ -737,50 +787,56 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     FileSortType sortType   = (FileSortType)(aSortFlags & 0x000F);
 
     // Sort
-    //sortFileList(eiList, sortType, reverse, dirFirst, caseSensitive);
+    sortFileList(fiList, sortType, reverse, dirFirst, caseSensitive);
 
     // Check Abort Flag
     __CHECK_ABORTING;
 
-    // Get Entry Info List Count
-    int eilCount = eiList.count();
+    // Get File Info List Count
+    int filCount = fiList.count();
 
-    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << eilCount << " - st: " << sortType << " - df: " << dirFirst << " - r: " << reverse << " - cs: " << caseSensitive;
+    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << filCount << " - st: " << sortType << " - df: " << dirFirst << " - r: " << reverse << " - cs: " << caseSensitive;
 
     // Go Thru List
-    for (int i=0; i<eilCount; ++i) {
+    for (int i=0; i<filCount; ++i) {
         // Check Abort Flag
         __CHECK_ABORTING;
 
         // Get File Name
-        QString fileName = eiList[i];
+        QString fileName = fiList[i].fileName();
 
+        // Check File Name
         if (fileName == ".") {
             // Skip Dot
             continue;
         }
 
-        // Check Local path
+        // Check Local Path
         if (localPath == QString("/") && fileName == "..") {
-            // Skip Double Dot
+            // Skip Double Dot In Root
             continue;
         }
 
         //qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - fileName: " << fileName;
 
-        std::cout << ".";
-        fflush(stdout);
+        //std::cout << ".";
+        //fflush(stdout);
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
 
         // Send Dir List Item Found
         sendDirListItemFound(localPath, fileName);
     }
 
+    // Check Abort Flag
     __CHECK_ABORTING;
 
     // Get End Time
-    QDateTime endTime = QDateTime::currentDateTimeUtc();
-    qDebug() << "#### ls -1a " << localPath << " - duration: " << startTime.msecsTo(endTime) << "msecs";
+    //QDateTime endTime = QDateTime::currentDateTimeUtc();
+    //qDebug() << "#### getDirFileInfoList + sortFileList " << localPath << " - duration: " << startTime.msecsTo(endTime) << "msecs";
 
+    // Check Abort Flag
     __CHECK_ABORTING;
 
     // Send Finished
@@ -914,9 +970,38 @@ void FileServerConnection::setFileDateTime(const QString& aFilePath, const QDate
 //==============================================================================
 void FileServerConnection::scanDirSize(const QString& aDirPath)
 {
+    // Init Local Path
+    QString localPath = aDirPath;
+
+    // Check File Exists
+    if (!checkFileExists(localPath, true)) {
+
+        return;
+    }
+
     qDebug() << "FileServerConnection::scanDirSize - cID: " << cID << " - aDirPath: " << aDirPath;
 
-    // ...
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Number Of Files
+    quint64 numFiles = 0;
+    // Init Number Of Dirs
+    quint64 numDirs = 0;
+    // Init Dir Size
+    quint64 dirSize = 0;
+
+    // Scan Dir Size
+    dirSize = scanDirectorySize(localPath, numDirs, numFiles, abortFlag, dirSizeScanProgressCB, this);
+
+    // Send Dir Size Progress
+    sendDirSizeScanProgress(localPath, numDirs, numFiles, dirSize);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_LIST_DIR, localPath, "", "");
 }
 
 //==============================================================================
@@ -1100,6 +1185,12 @@ void FileServerConnection::sendFinished(const QString& aOp, const QString& aPath
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
+
+    // Check Worker
+    if (worker) {
+        // Set Status
+        worker->setStatus(EFSCWSFinished);
+    }
 }
 
 //==============================================================================
@@ -1204,6 +1295,9 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
+
+    // Wait
+    //worker->wait();
 }
 
 //==============================================================================
@@ -1454,6 +1548,25 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
 }
 
 //==============================================================================
+// Dir Size Scan Progress Callback
+//==============================================================================
+void FileServerConnection::dirSizeScanProgressCB(const QString& aPath,
+                                                 const quint64& aNumDirs,
+                                                 const quint64& aNumFiles,
+                                                 const quint64& aScannedSize,
+                                                 void* aContext)
+{
+    // Check Context
+    FileServerConnection* self = static_cast<FileServerConnection*>(aContext);
+
+    // Check Self
+    if (self) {
+        // Send Dir Size Scan Progress
+        self->sendDirSizeScanProgress(aPath, aNumDirs, aNumFiles, aScannedSize);
+    }
+}
+
+//==============================================================================
 // Destructor
 //==============================================================================
 FileServerConnection::~FileServerConnection()
@@ -1466,10 +1579,12 @@ FileServerConnection::~FileServerConnection()
 
     // Check Worker
     if (worker) {
-        // Abort
-        worker->abort();
-        // Delete Worker
-        delete worker;
+        // Disconnect Signals
+        disconnect(worker, SIGNAL(threadStarted()), this, SLOT(workerThreadStarted()));
+        disconnect(worker, SIGNAL(threadFinished()), this, SLOT(workerThreadFinished()));
+
+        // Delete Worker Later
+        worker->deleteLater();
         worker = NULL;
     }
 

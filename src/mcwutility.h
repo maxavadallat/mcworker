@@ -3,10 +3,12 @@
 
 #include <QString>
 #include <QList>
+#include <QDir>
 #include <QDateTime>
 #include <QFileInfoList>
 
 #include "mcwinterface.h"
+
 
 //==============================================================================
 // FileSortType File Sort Type Enum
@@ -116,15 +118,19 @@ bool isDir(const QString& aDirPath);
 bool isDirEmpty(const QString& aDirPath);
 
 // Get Dir List
-QStringList getDirFileList(const QString& aDirPath, const bool& aShowHidden = true);
-
-
+QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidden = true);
 
 // Compare Method Type
 typedef int (*CompareFuncType)(const QFileInfo&, const QFileInfo&, const bool&, const bool&, const bool&);
 
 // Sort File List
 void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse = false, const bool& aDirFirst = true, const bool& aCase = true);
+
+// Dir Size Scan Propgress Callback Type
+typedef void (*dirSizeScanProgressCallback)(const QString&, const quint64&, const quint64&, const quint64&, void*);
+
+// Scan Dir Size
+quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& aNumFiles, const bool& aAbort, dirSizeScanProgressCallback aCallback = NULL, void* aContext = NULL);
 
 
 #endif // UTILITY

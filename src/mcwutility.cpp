@@ -1,6 +1,3 @@
-#include <QDir>
-#include <QFileInfo>
-#include <QDateTime>
 #include <QDebug>
 #include <QProcess>
 #include <QThread>
@@ -142,7 +139,20 @@ int deleteFile(const QString& aFilePath)
 //==============================================================================
 bool isDir(const QString& aDirPath)
 {
-    return getDirFileList(aDirPath).indexOf(".") >= 0;
+    // Get A Temp File Info List
+    QFileInfoList tempList = getDirFileInfoList(aDirPath);
+
+    // Get Count
+    int tlCount = tempList.count();
+
+    for (int i=0; i<tlCount; ++i) {
+        // Check File Info
+        if (tempList[i].fileName() == QString(".")) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 //==============================================================================
@@ -150,20 +160,20 @@ bool isDir(const QString& aDirPath)
 //==============================================================================
 bool isDirEmpty(const QString& aDirPath)
 {
-    return getDirFileList(aDirPath).count() == 2;
+    return getDirFileInfoList(aDirPath).count() == 2;
 }
 
 //==============================================================================
 // Get Dir File List
 //==============================================================================
-QStringList getDirFileList(const QString& aDirPath, const bool& aShowHidden)
+QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidden)
 {
     // Init New Path
     QString newPath = aDirPath;
     // Init Dir
     QDir dir(newPath.replace("~/", QDir::homePath() + "/"));
 
-    return dir.entryList(aShowHidden ? (QDir::AllEntries | QDir::Hidden | QDir::System) : QDir::AllEntries);
+    return dir.entryInfoList(aShowHidden ? (QDir::AllEntries | QDir::Hidden | QDir::System) : QDir::AllEntries);
 }
 
 //==============================================================================
@@ -509,6 +519,83 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
     }
 }
 
+#define __SDS_CHECK_ABORT   if (aAbort) return result
+
+//==============================================================================
+// Scan Dir Size
+//==============================================================================
+quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& aNumFiles, const bool& aAbort, dirSizeScanProgressCallback aCallback, void* aContext)
+{
+    // Init Dir Info
+    QFileInfo dirInfo(aDirPath);
+
+    // Init Result
+    quint64 result = 0;
+
+    // Check Abort
+    __SDS_CHECK_ABORT;
+
+    // Check If Is Dir
+    if (dirInfo.isDir() || dirInfo.isBundle()) {
+
+        qDebug() << "scanDirSize - aDirPath: " << aDirPath;
+
+        __SDS_CHECK_ABORT;
+
+        // Init dir
+        QDir dir(aDirPath);
+
+        __SDS_CHECK_ABORT;
+
+        // Get File Info List
+        QFileInfoList fiList = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+
+        __SDS_CHECK_ABORT;
+
+        // Get File Info List Count
+        int filCount = fiList.count();
+
+        __SDS_CHECK_ABORT;
+
+        // Go Thru File Info List
+        for (int i=0; i<filCount; ++i) {
+            __SDS_CHECK_ABORT;
+
+            // Get File Info
+            QFileInfo fileInfo = fiList[i];
+
+            __SDS_CHECK_ABORT;
+
+            // Check If Is Dir
+            if ((fileInfo.isDir() || fileInfo.isBundle()) && !fileInfo.isSymLink()) {
+                //qDebug() << "scanDirSize - dirName: " << fileInfo.fileName();
+                // Inc Num Dirs
+                aNumDirs++;
+                // Add Dir Size To REsult
+                result += scanDirectorySize(fileInfo.absoluteFilePath(), aNumDirs, aNumFiles, aAbort, aCallback, aContext);
+
+            } else {
+                //qDebug() << "scanDirSize - fileName: " << fileInfo.fileName() << " - size: " << fileInfo.size();
+                // Inc Num Files
+                aNumFiles++;
+                // Add File Size To REsult
+                result += fileInfo.size();
+            }
+
+            __SDS_CHECK_ABORT;
+
+            // Check Callback
+            if (aCallback) {
+                // Callback
+                aCallback(aDirPath, aNumDirs, aNumFiles, result, aContext);
+            }
+
+            __SDS_CHECK_ABORT;
+        }
+    }
+
+    return result;
+}
 
 
 

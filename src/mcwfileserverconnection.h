@@ -230,15 +230,21 @@ protected:
 
     // Process Last Buffer
     void processLastBuffer();
-
     // Process Request
     void processRequest(const QVariantMap& aDataMap);
-
-    // Process Operation Queue
+    // Process Operation Queue - Returns true if Queue Empty
     bool processOperationQueue();
-
     // Parse Request
     void parseRequest(const QVariantMap& aDataMap);
+    // Check If Is Queue Empty
+    bool isQueueEmpty();
+
+    // Dir Size Scan Progress Callback
+    static void dirSizeScanProgressCB(const QString& aPath,
+                                      const quint64& aNumDirs,
+                                      const quint64& aNumFiles,
+                                      const quint64& aScannedSize,
+                                      void* aContext);
 
 private:
     friend class FileServer;
