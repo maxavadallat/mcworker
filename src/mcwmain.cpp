@@ -12,9 +12,11 @@
 int main(int argc, char *argv[])
 {
 
+    qDebug() << " ";
     qDebug() << "================================================================================";
     qDebug() << "Starting MCWorker...";
     qDebug() << "================================================================================";
+    qDebug() << " ";
 
     // Init Application
     QCoreApplication a(argc, argv);
@@ -32,9 +34,11 @@ int main(int argc, char *argv[])
 
     // ...
 
+    qDebug() << " ";
     qDebug() << "================================================================================";
     qDebug() << "Exiting MCWorker...";
     qDebug() << "================================================================================";
+    qDebug() << " ";
 
     // Execute Applicaiton
     return result;

@@ -41,31 +41,25 @@ void FileServer::init()
 //==============================================================================
 void FileServer::startServer()
 {
-    // Check Full Server Name Path
-    if (QFile::exists(localServer.fullServerName())) {
-
-        // Remove Previous Server
-        if (!localServer.removeServer(serverName)) {
-            qWarning() << "FileServer::startServer - ERROR REMOVING OLD PATH INSTANCE!!";
-        }
-    }
-
     // Connect Signal
-    connect(&localServer, SIGNAL(newConnection()), this, SLOT(newClientConnection()));
+    connect(&server, SIGNAL(newConnection()), this, SLOT(newClientConnection()));
+    connect(&server, SIGNAL(acceptError(QAbstractSocket::SocketError)), this, SLOT(acceptError(QAbstractSocket::SocketError)));
 
     // Set Socket Options
-    localServer.setSocketOptions(QLocalServer::WorldAccessOption);
-
-    qDebug() << "FileServer::startServer - serverName: " << serverName;
-
-    // Start Listen
-    localServer.listen(serverName);
+    //server.setSocketOptions(QLocalServer::WorldAccessOption);
 
     // Check Server Name if it is Root
     if (serverName == QString(DEFAULT_SERVER_LISTEN_ROOT_PATH)) {
+        // Listen
+        server.listen(QHostAddress::Any, DEFAULT_FILE_SERVER_ROOT_HOST_PORT);
         // Start Idle Timer
         startIdleTimer();
+    } else {
+        // Listen
+        server.listen(QHostAddress::Any, DEFAULT_FILE_SERVER_HOST_PORT);
     }
+
+    qDebug() << "FileServer::startServer - serverName: " << serverName << " - Listening on PORT: " << server.serverPort();
 }
 
 //==============================================================================
@@ -75,11 +69,8 @@ void FileServer::stopServer()
 {
     qDebug() << "FileServer::stopServer - serverName: " << serverName;
 
-    // Close
-    localServer.close();
-
-    // Remove Previous Server
-    localServer.removeServer(serverName);
+    // Close Server
+    server.close();
 }
 
 //==============================================================================
@@ -90,10 +81,10 @@ void FileServer::newClientConnection()
     qDebug() << "FileServer::newClientConnection";
 
     // Create New File Server Connection
-    FileServerConnection* newServerConnection = new FileServerConnection(QDateTime::currentDateTime().toMSecsSinceEpoch(), localServer.nextPendingConnection());
+    FileServerConnection* newServerConnection = new FileServerConnection(QDateTime::currentDateTime().toMSecsSinceEpoch(), server.nextPendingConnection());
 
     // Write ID Data
-    newServerConnection->writeData(QString("%1").arg(newServerConnection->cID).toLocal8Bit());
+    newServerConnection->writeData(QString("%1").arg(newServerConnection->cID).toLocal8Bit(), false);
 
     // Connect Signals
     connect(newServerConnection, SIGNAL(activity(uint)), this, SLOT(clientActivity(uint)));
@@ -101,6 +92,16 @@ void FileServer::newClientConnection()
 
     // Add To Clients
     clientList << newServerConnection;
+}
+
+//==============================================================================
+// Accept Error Slot
+//==============================================================================
+void FileServer::acceptError(QAbstractSocket::SocketError socketError)
+{
+    qDebug() << "FileServer::newClientConnection - socketError: " << socketError;
+
+    // ...
 }
 
 //==============================================================================

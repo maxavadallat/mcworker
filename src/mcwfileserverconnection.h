@@ -3,7 +3,7 @@
 
 #include <QDir>
 #include <QObject>
-#include <QLocalSocket>
+#include <QTcpSocket>
 
 class FileServer;
 class FileServerConnectionWorker;
@@ -37,7 +37,7 @@ class FileServerConnection : public QObject
 
 public:
     // Constructor
-    explicit FileServerConnection(const unsigned int& aCID, QLocalSocket* aLocalSocket, QObject* aParent = NULL);
+    explicit FileServerConnection(const unsigned int& aCID, QTcpSocket* aLocalSocket, QObject* aParent = NULL);
 
     // Abort Current Operation
     void abort(const bool& aAbortSocket = false);
@@ -77,9 +77,12 @@ protected slots:
     void writeDataWithSignal(const QVariantMap& aData);
 
     // Write Data
-    void writeData(const QByteArray& aData);
+    void writeData(const QByteArray& aData, const bool& aFramed = true);
     // Write Data
     void writeData(const QVariantMap& aData);
+
+    // Frame Data
+    QByteArray frameData(const QByteArray& aData);
 
     // Test Run
     void testRun();
@@ -154,9 +157,9 @@ protected slots: // QLocalSocket
     // Socket Disconnected Slot
     void socketDisconnected();
     // Socket Error Slot
-    void socketError(QLocalSocket::LocalSocketError socketError);
+    void socketError(QAbstractSocket::SocketError socketError);
     // Socket State Changed Slot
-    void socketStateChanged(QLocalSocket::LocalSocketState socketState);
+    void socketStateChanged(QAbstractSocket::SocketState socketState);
 
     // Socket About To Close Slot
     void socketAboutToClose();
@@ -260,7 +263,7 @@ private:
     bool                        deleting;
 
     // Local Socket
-    QLocalSocket*               clientSocket;
+    QTcpSocket*                 clientSocket;
     // Client Thread
     QThread*                    clientThread;
 
@@ -272,8 +275,11 @@ private:
     // Last Map
     QVariantMap                 lastOperationDataMap;
 
+    // Frame Pattern
+    QByteArray                  framePattern;
+
     // Mutex
-    QMutex                      mutex;
+    mutable QMutex              mutex;
 
     // Operation Map
     QMap<QString, int>          operationMap;

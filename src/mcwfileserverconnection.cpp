@@ -30,7 +30,7 @@
 //==============================================================================
 // Constructor
 //==============================================================================
-FileServerConnection::FileServerConnection(const unsigned int& aCID, QLocalSocket* aLocalSocket, QObject* aParent)
+FileServerConnection::FileServerConnection(const unsigned int& aCID, QTcpSocket* aLocalSocket, QObject* aParent)
     : QObject(aParent)
     , cID(aCID)
     , cIDSent(false)
@@ -68,10 +68,10 @@ void FileServerConnection::init()
     connect(clientSocket, SIGNAL(disconnected()), this, SLOT(socketDisconnected()));
     connect(clientSocket, SIGNAL(aboutToClose()), this, SLOT(socketAboutToClose()));
     connect(clientSocket, SIGNAL(bytesWritten(qint64)), this, SLOT(socketBytesWritten(qint64)));
-    connect(clientSocket, SIGNAL(error(QLocalSocket::LocalSocketError)), this, SLOT(socketError(QLocalSocket::LocalSocketError)));
+    connect(clientSocket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(socketError(QAbstractSocket::SocketError)));
     connect(clientSocket, SIGNAL(readChannelFinished()), this, SLOT(socketReadChannelFinished()));
     connect(clientSocket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
-    connect(clientSocket, SIGNAL(stateChanged(QLocalSocket::LocalSocketState)), this, SLOT(socketStateChanged(QLocalSocket::LocalSocketState)));
+    connect(clientSocket, SIGNAL(stateChanged(QAbstractSocket::SocketState)), this, SLOT(socketStateChanged(QAbstractSocket::SocketState)));
 
     // ...
 
@@ -90,6 +90,12 @@ void FileServerConnection::init()
     operationMap[DEFAULT_OPERATION_ACKNOWLEDGE]   = EFSCOTAcknowledge;
 
     operationMap[DEFAULT_OPERATION_TEST]          = EFSCOTTest;
+
+    // Init Frame Pattern
+    framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_1);
+    framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_2);
+    framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_3);
+    framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_4);
 
     // ...
 
@@ -166,7 +172,7 @@ void FileServerConnection::close()
                 // Abort
                 clientSocket->abort();
                 // Disconnect From Server -> Delete Later
-                clientSocket->disconnectFromServer();
+                clientSocket->disconnectFromHost();
                 // Reset Client Socket
                 clientSocket = NULL;
 
@@ -197,8 +203,8 @@ void FileServerConnection::shutDown()
 
     // Check Client
     if (clientSocket) {
-        // Disconnect From Server
-        clientSocket->disconnectFromServer();
+        // Disconnect From Host
+        clientSocket->disconnectFromHost();
         // Close Client
         clientSocket->close();
     }
@@ -274,7 +280,7 @@ void FileServerConnection::writeDataWithSignal(const QVariantMap& aData)
 //==============================================================================
 // Write Data
 //==============================================================================
-void FileServerConnection::writeData(const QByteArray& aData)
+void FileServerConnection::writeData(const QByteArray& aData, const bool& aFramed)
 {
     // Lock
     QMutexLocker locker(&mutex);
@@ -289,18 +295,18 @@ void FileServerConnection::writeData(const QByteArray& aData)
 
     // Check Data
     if (!aData.isNull() && !aData.isEmpty()) {
-        //qDebug() << "FileServerConnection::writeData - cID: " << cID << " - length: " << aData.length();
+        qDebug() << "FileServerConnection::writeData - cID: " << cID << " - length: " << aData.length() + (aFramed ? framePattern.size() * 2 : 0);
 
         // Write Data
-        qint64 bytesWritten = clientSocket->write(aData);
+        qint64 bytesWritten = clientSocket->write(aFramed ? frameData(aData) : aData);
         // Flush
         clientSocket->flush();
         // Wait For Bytes Written
         //clientSocket->waitForBytesWritten();
 
         // Write Error
-        if (bytesWritten != aData.size()) {
-            qWarning() << "#### FileServerConnection::writeData - cID: " << cID << " - WRITE ERROR!!";
+        if (bytesWritten - (aFramed ? framePattern.size() * 2 : 0) != aData.size()) {
+            qWarning() << "#### FileServerConnection::writeData - cID: " << cID << " bytesWritten: " << bytesWritten << " - WRITE ERROR!!";
         }
     }
 
@@ -331,6 +337,14 @@ void FileServerConnection::writeData(const QVariantMap& aData)
 }
 
 //==============================================================================
+// Frame Data
+//==============================================================================
+QByteArray FileServerConnection::frameData(const QByteArray& aData)
+{
+    return framePattern + aData + framePattern;
+}
+
+//==============================================================================
 // Socket Connected Slot
 //==============================================================================
 void FileServerConnection::socketConnected()
@@ -354,7 +368,7 @@ void FileServerConnection::socketDisconnected()
 //==============================================================================
 // Socket Error Slot
 //==============================================================================
-void FileServerConnection::socketError(QLocalSocket::LocalSocketError socketError)
+void FileServerConnection::socketError(QAbstractSocket::SocketError socketError)
 {
     qWarning() << "FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError << " - error: " << clientSocket->errorString();
 
@@ -364,7 +378,7 @@ void FileServerConnection::socketError(QLocalSocket::LocalSocketError socketErro
 //==============================================================================
 // Socket State Changed Slot
 //==============================================================================
-void FileServerConnection::socketStateChanged(QLocalSocket::LocalSocketState socketState)
+void FileServerConnection::socketStateChanged(QAbstractSocket::SocketState socketState)
 {
     Q_UNUSED(socketState);
 
@@ -501,13 +515,13 @@ void FileServerConnection::processRequest(const QVariantMap& aDataMap)
     // Check Worker
     if (worker) {
         // Check Worker Status If Busy
-        if (worker->status == EFSCWSBusy) {
+        if (worker->status == EFSCWSBusy || worker->status == EFSCWSWaiting) {
 
             // Cancel Worker
             worker->cancel();
 
         // Check Worker Status If Finished
-        } if (worker->status == EFSCWSFinished) {
+        } if (worker->status == EFSCWSFinished ) {
 
             // Wake Up Worker
             worker->wakeUp();
@@ -597,6 +611,10 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
             scanDirSize(path);
         break;
 
+        case EFSCOTMakeDir:
+            // Make Dir
+            createDir(path);
+        break;
 /*
 
         case EFSCOTTreeDir:
@@ -604,10 +622,6 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
             fsConnection->scanDirTree(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString());
         break;
 
-        case EFSCOTMakeDir:
-            // Make Dir
-            fsConnection->createDir(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString());
-        break;
 
         case EFSCOTDeleteFile:
             // Delete File
@@ -1051,15 +1065,18 @@ void FileServerConnection::searchFile(const QString& aName, const QString& aDirP
 void FileServerConnection::testRun()
 {
     // Get Current Thread
-    QThread* currentThread = QThread::currentThread();
+    //QThread* currentThread = QThread::currentThread();
 
     // Init Rand
     qsrand(QDateTime::currentMSecsSinceEpoch());
 
     // ...
 
+    // Init Range
+    int range = 10;
+
     // Generate New Random Count
-    int randomCount = qrand() % 7 + 1;
+    int randomCount = qrand() % range + 1;
     // Init Counter
     int counter = randomCount;
 
@@ -1067,15 +1084,12 @@ void FileServerConnection::testRun()
     forever {
         __CHECK_ABORTING;
 
-        // Dec Counter
-        counter--;
-
         // Check Counter
         if (counter <= 0) {
             __CHECK_ABORTING;
 
             // Generate New Random Count
-            randomCount = qrand() % 7 + 1;
+            randomCount = qrand() % range + 1;
             // Reset Counter
             counter = randomCount;
 
@@ -1091,15 +1105,33 @@ void FileServerConnection::testRun()
 
         } else {
 
-            qDebug() << "FileServerConnection::testRun - cID: " << cID << " - CountDown: " << counter;
+            //qDebug() << "FileServerConnection::testRun - cID: " << cID << " - CountDown: " << counter;
 
             // Emit Activity Signal
             emit activity(cID);
 
             __CHECK_ABORTING;
 
+            // Init New Data
+            QVariantMap newDataMap;
+
+            // Set Up New Data
+            newDataMap[DEFAULT_KEY_CID]         = cID;
+            newDataMap[DEFAULT_KEY_OPERATION]   = DEFAULT_OPERATION_TEST;
+            newDataMap[DEFAULT_KEY_RESPONSE]    = DEFAULT_OPERATION_TEST;
+            newDataMap[DEFAULT_KEY_CUSTOM]      = QString("Testing Testing Testing - %1 of %2").arg(counter).arg(randomCount);
+
+            // Write Data With Signal
+            writeDataWithSignal(newDataMap);
+
+            // Write Data
+            //writeData(newDataMap);
+
             // Sleep
-            currentThread->msleep(1000);
+            QThread::currentThread()->usleep(1);
+
+            // Dec Counter
+            counter--;
         }
     }
 }
@@ -1297,7 +1329,7 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
     writeDataWithSignal(newDataMap);
 
     // Wait
-    //worker->wait();
+    worker->wait();
 }
 
 //==============================================================================

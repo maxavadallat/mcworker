@@ -1,7 +1,7 @@
 #ifndef FILESERVER_H
 #define FILESERVER_H
 
-#include <QLocalServer>
+#include <QTcpServer>
 
 class FileServerConnection;
 
@@ -46,6 +46,8 @@ protected slots:
 
     // New Client Connection Slot
     void newClientConnection();
+    // Accept Error Slot
+    void acceptError(QAbstractSocket::SocketError socketError);
 
     // Client Activity Slot
     void clientActivity(const unsigned int& aID);
@@ -79,7 +81,7 @@ private:
     QString                         serverName;
 
     // Local Server
-    QLocalServer                    localServer;
+    QTcpServer                      server;
 
     // Clients
     QList<FileServerConnection*>    clientList;

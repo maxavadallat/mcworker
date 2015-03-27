@@ -28,6 +28,9 @@ FileServerConnectionWorker::FileServerConnectionWorker(FileServerConnection* aCo
     // Move to Thread
     moveToThread(workerThread);
 
+    // Set Priority
+    workerThread->setPriority(QThread::NormalPriority);
+
     // Set Status
     setStatus(EFSCWSIdle);
 
@@ -139,12 +142,15 @@ void FileServerConnectionWorker::cancel()
 
     // Check Status
     if (status == EFSCWSWaiting) {
+        // Set Status
+        setStatus(EFSCWSCancelling);
         // Wake One Wait Condition
         waitCondition.wakeOne();
+    } else {
+        // Set Status
+        setStatus(EFSCWSCancelling);
     }
 
-    // Set Status
-    setStatus(EFSCWSCancelling);
 
     // Check File Server Connection
     if (fsConnection) {
@@ -231,7 +237,7 @@ void FileServerConnectionWorker::doOperation()
         __CHECK_ABORTING;
 
         // Sleep
-        QThread::currentThread()->msleep(1);
+        QThread::currentThread()->usleep(1);
 
         __CHECK_ABORTING;
 

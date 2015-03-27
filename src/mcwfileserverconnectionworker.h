@@ -92,7 +92,7 @@ private:
     QThread*                workerThread;
 
     // Worker Mutex
-    QMutex                  mutex;
+    mutable QMutex          mutex;
 
     // Wait Condition
     QWaitCondition          waitCondition;

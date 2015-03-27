@@ -7,12 +7,22 @@
 // File Server Worker App Name
 #define DEFAULT_FILE_SERVER_EXEC_NAME           "mcworker"
 
+// File Server Host Port
+#define DEFAULT_FILE_SERVER_HOST_PORT           7707
+#define DEFAULT_FILE_SERVER_ROOT_HOST_PORT      7708
+
 // Listen Path
 #define DEFAULT_SERVER_LISTEN_PATH              "/tmp/mcw_server"
 #define DEFAULT_SERVER_LISTEN_ROOT_PATH         "/tmp/mcw_server_root"
 
 // Root Option Command Line Parameter
 #define DEFAULT_OPTION_RUNASROOT                "--root"
+
+// Default Data Frame Pattern
+#define DEFAULT_DATA_FRAME_PATTERN_CHAR_1       '\x07'
+#define DEFAULT_DATA_FRAME_PATTERN_CHAR_2       '\x07'
+#define DEFAULT_DATA_FRAME_PATTERN_CHAR_3       '\x00'
+#define DEFAULT_DATA_FRAME_PATTERN_CHAR_4       '\x07'
 
 // Data Map Keys
 #define DEFAULT_KEY_CID                         "cid"
@@ -41,6 +51,7 @@
 #define DEFAULT_KEY_RESPONSE                    "resp"
 #define DEFAULT_KEY_CONFIRMCODE                 "conf"
 #define DEFAULT_KEY_READY                       "rdy"
+#define DEFAULT_KEY_CUSTOM                      "user"
 
 
 // Operation Codes
@@ -88,6 +99,9 @@
 #define DEFAULT_RESPONSE_READY                  "RDY"
 #define DEFAULT_RESPONSE_ABORT                  "ABRT"
 #define DEFAULT_RESPONSE_ERROR                  "ERR"
+
+#define DEFAULT_RESPONSE_TEST                   "TEST"
+
 
 // Error Codes
 #define DEFAULT_ERROR_OK                        0x0000
