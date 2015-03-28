@@ -122,7 +122,7 @@
 #define DEFAULT_SORT_DATE                       0x0004
 #define DEFAULT_SORT_OWNER                      0x0005
 #define DEFAULT_SORT_PERMS                      0x0006
-#define DEFAULT_SORT_ATTR                       0x0007
+#define DEFAULT_SORT_ATTRS                      0x0007
 
 #define DEFAULT_SORT_REVERSE                    0x0100
 

@@ -22,7 +22,7 @@ enum FileSortType
     EFSTDate        = DEFAULT_SORT_DATE,
     EFSTOwnership   = DEFAULT_SORT_OWNER,
     EFSTPermission  = DEFAULT_SORT_PERMS,
-    EFSTAttributes  = DEFAULT_SORT_ATTR
+    EFSTAttributes  = DEFAULT_SORT_ATTRS
 };
 
 //==============================================================================

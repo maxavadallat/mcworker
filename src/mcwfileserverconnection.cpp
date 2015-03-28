@@ -295,7 +295,7 @@ void FileServerConnection::writeData(const QByteArray& aData, const bool& aFrame
 
     // Check Data
     if (!aData.isNull() && !aData.isEmpty()) {
-        qDebug() << "FileServerConnection::writeData - cID: " << cID << " - length: " << aData.length() + (aFramed ? framePattern.size() * 2 : 0);
+        //qDebug() << "FileServerConnection::writeData - cID: " << cID << " - length: " << aData.length() + (aFramed ? framePattern.size() * 2 : 0);
 
         // Write Data
         qint64 bytesWritten = clientSocket->write(aFramed ? frameData(aData) : aData);
@@ -1322,6 +1322,7 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
     newDataMap[DEFAULT_KEY_NUMFILES]    = aNumFiles;
     newDataMap[DEFAULT_KEY_NUMDIRS]     = aNumDirs;
     newDataMap[DEFAULT_KEY_DIRSIZE]     = aScannedSize;
+    newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_DIRSCAN);
 
     // ...
 
@@ -1329,7 +1330,7 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->wait();
+    //worker->wait();
 }
 
 //==============================================================================
@@ -1352,7 +1353,7 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->wait();
+    //worker->wait();
 }
 
 //==============================================================================
@@ -1400,7 +1401,7 @@ void FileServerConnection::fileSearchItemFound(const QString& aOp, const QString
     writeDataWithSignal(newDataMap);
 
     // Wait
-    worker->wait();
+    //worker->wait();
 }
 
 //==============================================================================
