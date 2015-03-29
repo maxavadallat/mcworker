@@ -249,7 +249,7 @@ void FileServerConnectionWorker::doOperation()
         // Check Empty Queue
         if (fsConnection->isQueueEmpty())
         {
-            qDebug() << "#### FileServerConnectionWorker::doOperation >>>> SLEEP";
+            //qDebug() << "FileServerConnectionWorker::doOperation >>>> SLEEP";
             // Wait
             waitCondition.wait(&mutex);
         }
@@ -370,6 +370,6 @@ FileServerConnectionWorker::~FileServerConnectionWorker()
 
     // ...
 
-    qDebug() << "#### FileServerConnectionWorker::~FileServerConnectionWorker";
+    qDebug() << "FileServerConnectionWorker::~FileServerConnectionWorker";
 }
 
