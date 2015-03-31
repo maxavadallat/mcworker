@@ -22,7 +22,10 @@ enum FSCOperationType
     EFSCOTAbort,
     EFSCOTQuit,
     EFSCOTResponse,
+    EFSCOTSuspend,
+    EFSCOTResume,
     EFSCOTAcknowledge,
+
 
     EFSCOTTest          = 0x00ff
 };
@@ -72,6 +75,10 @@ protected slots:
 
     // Handle Acknowledge
     void handleAcknowledge();
+    // Handle Suspend
+    void handleSuspend();
+    // Handle Resume
+    void handleResume();
 
     // Write Data
     void writeDataWithSignal(const QVariantMap& aData);
@@ -286,11 +293,11 @@ private:
 
     // Abort Signal
     bool                        abortFlag;
+    // SuspendFlag
+    bool                        suspendFlag;
 
     // Operation
     QString                     operation;
-    // Operation ID
-    //int                         opID;
     // Options
     int                         options;
     // Filters

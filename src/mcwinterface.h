@@ -71,6 +71,9 @@
 #define DEFAULT_OPERATION_QUIT                  "QUIT"
 #define DEFAULT_OPERATION_RESP                  "RESP"
 #define DEFAULT_OPERATION_ACKNOWLEDGE           "ACKN"
+#define DEFAULT_OPERATION_PAUSE                 "PSE"
+#define DEFAULT_OPERATION_RESUME                "RSM"
+#define DEFAULT_OPERATION_CONTENT               "CNT"
 
 #define DEFAULT_OPERATION_TEST                  "TEST"
 
@@ -125,11 +128,8 @@
 #define DEFAULT_SORT_ATTRS                      0x0007
 
 #define DEFAULT_SORT_REVERSE                    0x0100
-
 #define DEFAULT_SORT_DIRFIRST                   0x1000
-
 #define DEFAULT_SORT_CASE                       0x2000
-
 
 // Filter Options
 #define DEFAULT_FILTER_SHOW_HIDDEN              0x0001

@@ -39,8 +39,8 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QTcpSocket*
     , clientThread(QThread::currentThread())
     , worker(NULL)
     , abortFlag(false)
+    , suspendFlag(false)
     , operation()
-    //, opID(-1)
     , options(0)
     , filters(0)
     , sortFlags(0)
@@ -76,20 +76,22 @@ void FileServerConnection::init()
     // ...
 
     // Set Up Operation Map
-    operationMap[DEFAULT_OPERATION_LIST_DIR]      = EFSCOTListDir;
-    operationMap[DEFAULT_OPERATION_SCAN_DIR]      = EFSCOTScanDir;
-    operationMap[DEFAULT_OPERATION_TREE_DIR]      = EFSCOTTreeDir;
-    operationMap[DEFAULT_OPERATION_MAKE_DIR]      = EFSCOTMakeDir;
-    operationMap[DEFAULT_OPERATION_DELETE_FILE]   = EFSCOTDeleteFile;
-    operationMap[DEFAULT_OPERATION_SEARCH_FILE]   = EFSCOTSearchFile;
-    operationMap[DEFAULT_OPERATION_COPY_FILE]     = EFSCOTCopyFile;
-    operationMap[DEFAULT_OPERATION_MOVE_FILE]     = EFSCOTMoveFile;
-    operationMap[DEFAULT_OPERATION_ABORT]         = EFSCOTAbort;
-    operationMap[DEFAULT_OPERATION_QUIT]          = EFSCOTQuit;
-    operationMap[DEFAULT_OPERATION_RESP]          = EFSCOTResponse;
-    operationMap[DEFAULT_OPERATION_ACKNOWLEDGE]   = EFSCOTAcknowledge;
+    operationMap[DEFAULT_OPERATION_LIST_DIR]    = EFSCOTListDir;
+    operationMap[DEFAULT_OPERATION_SCAN_DIR]    = EFSCOTScanDir;
+    operationMap[DEFAULT_OPERATION_TREE_DIR]    = EFSCOTTreeDir;
+    operationMap[DEFAULT_OPERATION_MAKE_DIR]    = EFSCOTMakeDir;
+    operationMap[DEFAULT_OPERATION_DELETE_FILE] = EFSCOTDeleteFile;
+    operationMap[DEFAULT_OPERATION_SEARCH_FILE] = EFSCOTSearchFile;
+    operationMap[DEFAULT_OPERATION_COPY_FILE]   = EFSCOTCopyFile;
+    operationMap[DEFAULT_OPERATION_MOVE_FILE]   = EFSCOTMoveFile;
+    operationMap[DEFAULT_OPERATION_ABORT]       = EFSCOTAbort;
+    operationMap[DEFAULT_OPERATION_QUIT]        = EFSCOTQuit;
+    operationMap[DEFAULT_OPERATION_RESP]        = EFSCOTResponse;
+    operationMap[DEFAULT_OPERATION_PAUSE]       = EFSCOTSuspend;
+    operationMap[DEFAULT_OPERATION_RESUME]      = EFSCOTResume;
+    operationMap[DEFAULT_OPERATION_ACKNOWLEDGE] = EFSCOTAcknowledge;
 
-    operationMap[DEFAULT_OPERATION_TEST]          = EFSCOTTest;
+    operationMap[DEFAULT_OPERATION_TEST]        = EFSCOTTest;
 
     // Init Frame Pattern
     framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_1);
@@ -255,12 +257,54 @@ void FileServerConnection::handleAcknowledge()
 {
     //qDebug() << "FileServerConnection::handleAcknowledge";
 
-    // Check Wake
+    // Check Worker
     if (worker) {
         // Wake One Wait Condition
         worker->wakeUp();
     }
 }
+
+//==============================================================================
+// Handle Suspend
+//==============================================================================
+void FileServerConnection::handleSuspend()
+{
+    // Check Suspend Flag
+    if (!suspendFlag) {
+        qDebug() << "FileServerConnection::handleSuspend";
+        // Set Suspend Flag
+        suspendFlag = true;
+
+        // Check Worker
+        if (worker) {
+            // Wait Worker
+            worker->wait();
+        }
+
+        // ...
+
+    }
+}
+
+//==============================================================================
+// Handle Resume
+//==============================================================================
+void FileServerConnection::handleResume()
+{
+    // Check Suspend Flag
+    if (suspendFlag) {
+        qDebug() << "FileServerConnection::handleResume";
+        // Reset Suspend Flag
+        suspendFlag = false;
+
+        // Check Worker
+        if (worker) {
+            // Wake One Wait Condition
+            worker->wakeUp();
+        }
+    }
+}
+
 
 //==============================================================================
 // Write Data
@@ -482,8 +526,20 @@ void FileServerConnection::processLastBuffer()
             abort();
         break;
 
+        case EFSCOTSuspend:
+            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - SUSPEND!";
+            // Handle Suspend
+            handleSuspend();
+        break;
+
+        case EFSCOTResume:
+            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - RESUME!";
+            // Handle Resume
+            handleResume();
+        break;
+
         case EFSCOTAcknowledge:
-            //qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
+            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
             // Handle Acknowledge
             handleAcknowledge();
         break;
