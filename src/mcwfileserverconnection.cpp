@@ -924,7 +924,7 @@ void FileServerConnection::createDir(const QString& aDirPath)
     QString localPath = aDirPath;
 
     // Check Dir Exists
-    if (!checkDirExist(localPath, false)) {
+    if (checkDirExist(localPath, false)) {
 
         return;
     }
