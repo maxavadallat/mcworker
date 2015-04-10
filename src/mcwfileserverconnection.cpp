@@ -86,7 +86,7 @@ void FileServerConnection::init()
     operationMap[DEFAULT_OPERATION_MOVE_FILE]   = EFSCOTMoveFile;
     operationMap[DEFAULT_OPERATION_ABORT]       = EFSCOTAbort;
     operationMap[DEFAULT_OPERATION_QUIT]        = EFSCOTQuit;
-    operationMap[DEFAULT_OPERATION_RESP]        = EFSCOTResponse;
+    operationMap[DEFAULT_OPERATION_USER_RESP]   = EFSCOTUserResponse;
     operationMap[DEFAULT_OPERATION_PAUSE]       = EFSCOTSuspend;
     operationMap[DEFAULT_OPERATION_RESUME]      = EFSCOTResume;
     operationMap[DEFAULT_OPERATION_ACKNOWLEDGE] = EFSCOTAcknowledge;
@@ -544,8 +544,10 @@ void FileServerConnection::processLastBuffer()
             handleAcknowledge();
         break;
 
-        case EFSCOTResponse:
+        case EFSCOTUserResponse:
             qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - RESPONSE!";
+            // Update Last Operation Path
+            lastOperationDataMap[DEFAULT_KEY_PATH] = newVariantMap[DEFAULT_KEY_PATH].toString();
             // Set Response
             handleResponse(newVariantMap[DEFAULT_KEY_RESPONSE].toInt());
         break;
@@ -644,6 +646,8 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
     source      = lastOperationDataMap[DEFAULT_KEY_SOURCE].toString();
     // Get Target
     target      = lastOperationDataMap[DEFAULT_KEY_TARGET].toString();
+    // Get Content for Search
+    content     = lastOperationDataMap[DEFAULT_KEY_CONTENT].toString();
 
     qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - operation: " << operation;
 
@@ -671,40 +675,32 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
             // Make Dir
             createDir(path);
         break;
-/*
-
-        case EFSCOTTreeDir:
-            // Scan Dir Tree
-            fsConnection->scanDirTree(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString());
-        break;
-
 
         case EFSCOTDeleteFile:
             // Delete File
-            fsConnection->deleteFile(fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString());
+            deleteFile(path);
+        break;
+
+        case EFSCOTTreeDir:
+            // Scan Dir Tree
+            scanDirTree(path);
         break;
 
         case EFSCOTSearchFile:
             // Search File
-            fsConnection->searchFile(fsConnection->lastOperationDataMap[DEFAULT_KEY_FILENAME].toString(),
-                                     fsConnection->lastOperationDataMap[DEFAULT_KEY_PATH].toString(),
-                                     fsConnection->lastOperationDataMap[DEFAULT_KEY_CONTENT].toString(),
-                                     fsConnection->lastOperationDataMap[DEFAULT_KEY_OPTIONS].toInt());
+            searchFile(filePath, path, content, options);
         break;
 
         case EFSCOTCopyFile:
             // Copy File
-            fsConnection->copyFile(fsConnection->lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(),
-                                   fsConnection->lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+            copyFile(source, target);
         break;
 
         case EFSCOTMoveFile:
             // Move/Rename File
-            fsConnection->moveFile(fsConnection->lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(),
-                                   fsConnection->lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+            moveFile(source, target);
         break;
 
-*/
         default:
             qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - operation: " << operation << " - UNHANDLED!!";
         break;
@@ -945,7 +941,7 @@ void FileServerConnection::createDir(const QString& aDirPath)
             sendError(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "", DEFAULT_ERROR_GENERAL);
         }
 
-    } while (!result && response == DEFAULT_RESPONSE_RETRY);
+    } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
     // Send Finished
     sendFinished(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
@@ -992,11 +988,11 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
                 sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
             }
 
-        } while (!result && response == DEFAULT_RESPONSE_RETRY);
-    }
+        } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
-    // Send Finished
-    sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+    }
 }
 
 //==============================================================================
@@ -1415,7 +1411,7 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
 //==============================================================================
 // Send File Operation Queue Item Found
 //==============================================================================
-void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
+void FileServerConnection::sendFileOpQueueItemFound(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
     // Init New Data Map
     QVariantMap newDataMap;
@@ -1440,7 +1436,7 @@ void FileServerConnection::fileOpQueueItemFound(const QString& aOp, const QStrin
 //==============================================================================
 // Send File Search Item Item Found
 //==============================================================================
-void FileServerConnection::fileSearchItemFound(const QString& aOp, const QString& aFilePath)
+void FileServerConnection::sendFileSearchItemFound(const QString& aOp, const QString& aFilePath)
 {
     // Init New Data Map
     QVariantMap newDataMap;
@@ -1486,8 +1482,7 @@ bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpe
             sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aFilePath, "", "", aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
 
             // Check Response
-            if (response == DEFAULT_RESPONSE_SKIP ||
-                response == DEFAULT_RESPONSE_CANCEL) {
+            if (response == DEFAULT_CONFIRM_SKIP || response == DEFAULT_CONFIRM_CANCEL || response == DEFAULT_CONFIRM_ABORT) {
 
                 // Send Finished
 
@@ -1495,19 +1490,16 @@ bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpe
             }
 
             // Check Response
-            if (response == DEFAULT_RESPONSE_OK) {
+            if (response == DEFAULT_CONFIRM_RETRY) {
                 // Update Dir Path
                 aFilePath = lastOperationDataMap[DEFAULT_KEY_PATH].toString();
                 // Update Dir Info
                 fileInfo = QFileInfo(aFilePath);
                 // Update Dir Exists
                 fileExits = fileInfo.exists();
-                // Reset Response
-                response = DEFAULT_RESPONSE_RETRY;
             }
-
         }
-    } while ((fileExits != aExpected) && (response == DEFAULT_RESPONSE_RETRY));
+    } while ((fileExits != aExpected) && (response == DEFAULT_CONFIRM_RETRY));
 
     return fileExits;
 }
@@ -1517,6 +1509,9 @@ bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpe
 //==============================================================================
 bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpected)
 {
+    return checkFileExists(aDirPath, aExpected);
+
+/*
     // Init Dir Info
     QFileInfo dirInfo(aDirPath);
     // Get Dir Exists
@@ -1538,8 +1533,7 @@ bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpecte
             sendError(operation, aDirPath, "", "", aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
 
             // Check Response
-            if (response == DEFAULT_RESPONSE_SKIP ||
-                response == DEFAULT_RESPONSE_CANCEL) {
+            if (response == DEFAULT_CONFIRM_SKIP || response == DEFAULT_CONFIRM_CANCEL || response == DEFAULT_CONFIRM_ABORT) {
 
                 // Send Finished
 
@@ -1547,7 +1541,7 @@ bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpecte
             }
 
             // Check Response
-            if (response == DEFAULT_RESPONSE_OK) {
+            if (response == DEFAULT_CONFIRM_OK || response == DEFAULT_CONFIRM_RETRY) {
                 // Update Dir Path
                 aDirPath = lastOperationDataMap[DEFAULT_KEY_PATH].toString();
                 // Update Dir Info
@@ -1555,12 +1549,13 @@ bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpecte
                 // Update Dir Exists
                 dirExits = dirInfo.exists();
                 // Reset Response
-                response = DEFAULT_RESPONSE_RETRY;
+                response = DEFAULT_CONFIRM_RETRY;
             }
         }
-    } while ((dirExits != aExpected) && (response == DEFAULT_RESPONSE_RETRY));
+    } while ((dirExits != aExpected) && (response == DEFAULT_CONFIRM_RETRY));
 
     return dirExits;
+*/
 }
 
 //==============================================================================
@@ -1612,6 +1607,60 @@ QDir::SortFlags FileServerConnection::parseSortFlags(const int& aSortFlags)
 void FileServerConnection::deleteDirectory(const QString& aDirPath)
 {
     qDebug() << "FileServerConnection::deleteDirectory - cID: " << cID << " - aDirPath: " << aDirPath;
+
+    // Init Local Path
+    QString localPath(aDirPath);
+
+    // Init Dir
+    QDir dir(localPath);
+
+    // Get File List
+    QStringList fileList = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
+
+    // Get File List Count
+    int flCount = fileList.count();
+
+    // Check File List Count
+    if (flCount <= 0) {
+
+        // Init Result
+        bool result = true;
+
+        do  {
+            // Delete Dir
+            //result = dir.remove(localPath);
+
+            // Check Result
+            if (!result) {
+                // Send Error
+                sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
+            }
+
+        } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+    } else {
+        // Check Local Path
+        if (!localPath.endsWith("/")) {
+            // Adjust Local Path
+            localPath += "/";
+        }
+
+        // Go Thru File List
+        for (int i=0; i<flCount; ++i) {
+            // Send Queue Item Found
+            sendFileOpQueueItemFound(DEFAULT_OPERATION_DELETE_FILE, localPath + fileList[i], "", "");
+        }
+
+        // FOR TESTING TESTING TESTING
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+        // FOR TESTING TESTING TESTING
+    }
 
     // ...
 }

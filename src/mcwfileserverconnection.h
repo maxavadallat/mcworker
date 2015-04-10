@@ -21,7 +21,7 @@ enum FSCOperationType
     EFSCOTMoveFile,
     EFSCOTAbort,
     EFSCOTQuit,
-    EFSCOTResponse,
+    EFSCOTUserResponse,
     EFSCOTSuspend,
     EFSCOTResume,
     EFSCOTAcknowledge,
@@ -147,14 +147,14 @@ protected slots:
                               const QString& aFileName);
 
     // Send File Operation Queue Item Found
-    void fileOpQueueItemFound(const QString& aOp,
-                              const QString& aPath,
-                              const QString& aSource,
-                              const QString& aTarget);
+    void sendFileOpQueueItemFound(const QString& aOp,
+                                  const QString& aPath,
+                                  const QString& aSource,
+                                  const QString& aTarget);
 
     // Send File Search Item Item Found
-    void fileSearchItemFound(const QString& aOp,
-                             const QString& aFilePath);
+    void sendFileSearchItemFound(const QString& aOp,
+                                 const QString& aFilePath);
 
 
 protected slots: // QLocalSocket
@@ -315,6 +315,8 @@ private:
     QString                     source;
     // Target
     QString                     target;
+    // Content
+    QString                     content;
 
     // Pending Operations
     QList<QVariantMap>          pendingOperations;

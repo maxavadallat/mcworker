@@ -69,7 +69,7 @@
 #define DEFAULT_OPERATION_DATETIME              "DATE"
 #define DEFAULT_OPERATION_ABORT                 "ABORT"
 #define DEFAULT_OPERATION_QUIT                  "QUIT"
-#define DEFAULT_OPERATION_RESP                  "RESP"
+#define DEFAULT_OPERATION_USER_RESP             "RESP"
 #define DEFAULT_OPERATION_ACKNOWLEDGE           "ACKN"
 #define DEFAULT_OPERATION_PAUSE                 "PSE"
 #define DEFAULT_OPERATION_RESUME                "RSM"
@@ -77,16 +77,17 @@
 
 #define DEFAULT_OPERATION_TEST                  "TEST"
 
-// Response Values
-#define DEFAULT_RESPONSE_OK                     QDialogButtonBox::Ok
-#define DEFAULT_RESPONSE_CANCEL                 QDialogButtonBox::Cancel
-#define DEFAULT_RESPONSE_YES                    QDialogButtonBox::Yes
-#define DEFAULT_RESPONSE_YESALL                 QDialogButtonBox::YesToAll
-#define DEFAULT_RESPONSE_NO                     QDialogButtonBox::No
-#define DEFAULT_RESPONSE_NOALL                  QDialogButtonBox::NoToAll
-#define DEFAULT_RESPONSE_SKIP                   QDialogButtonBox::Ignore
-#define DEFAULT_RESPONSE_SKIPALL               (QDialogButtonBox::Ignore + 1)
-#define DEFAULT_RESPONSE_RETRY                  QDialogButtonBox::Retry
+// Confirm Values
+#define DEFAULT_CONFIRM_OK                      QDialogButtonBox::Ok
+#define DEFAULT_CONFIRM_CANCEL                  QDialogButtonBox::Cancel
+#define DEFAULT_CONFIRM_YES                     QDialogButtonBox::Yes
+#define DEFAULT_CONFIRM_YESALL                  QDialogButtonBox::YesToAll
+#define DEFAULT_CONFIRM_NO                      QDialogButtonBox::No
+#define DEFAULT_CONFIRM_NOALL                   QDialogButtonBox::NoToAll
+#define DEFAULT_CONFIRM_SKIP                    QDialogButtonBox::Ignore
+#define DEFAULT_CONFIRM_SKIPALL                (QDialogButtonBox::Ignore + 1)
+#define DEFAULT_CONFIRM_RETRY                   QDialogButtonBox::Retry
+#define DEFAULT_CONFIRM_ABORT                   QDialogButtonBox::Abort
 
 
 // Response Codes
