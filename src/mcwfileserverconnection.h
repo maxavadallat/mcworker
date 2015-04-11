@@ -104,10 +104,7 @@ protected slots:
     void sendProgress(const QString& aOp,
                       const QString& aCurrFilePath,
                       const quint64& aCurrProgress,
-                      const quint64& aCurrTotal,
-                      const quint64& aOverallProgress,
-                      const quint64& aOverallTotal,
-                      const int& aSpeed);
+                      const quint64& aCurrTotal);
 
     // Send File Operation Finished
     void sendFinished(const QString& aOp,

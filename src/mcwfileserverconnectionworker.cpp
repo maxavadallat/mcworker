@@ -29,7 +29,7 @@ FileServerConnectionWorker::FileServerConnectionWorker(FileServerConnection* aCo
     moveToThread(workerThread);
 
     // Set Priority
-    workerThread->setPriority(QThread::NormalPriority);
+    //workerThread->setPriority(QThread::NormalPriority);
 
     // Set Status
     setStatus(EFSCWSIdle);
@@ -203,6 +203,9 @@ void FileServerConnectionWorker::abort()
 //==============================================================================
 void FileServerConnectionWorker::doOperation()
 {
+    // Set Thread Priority
+    workerThread->setPriority(QThread::LowPriority);
+
     qDebug() << "--------------------------------------------------------------------------------";
     qDebug() << "FileServerConnectionWorker::doOperation - STARTED!";
     qDebug() << "--------------------------------------------------------------------------------";

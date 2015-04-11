@@ -952,35 +952,126 @@ void FileServerConnection::createDir(const QString& aDirPath)
 //==============================================================================
 void FileServerConnection::deleteFile(const QString& aFilePath)
 {
-    qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - aFilePath: " << aFilePath;
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_DELETE_FILE, aFilePath, "", "");
 
     // Init Local Path
     QString localPath = aFilePath;
 
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+
     // Check File Exists
     if (!checkFileExists(localPath, true)) {
+
+        // Send Finished
+        sendAborted(DEFAULT_OPERATION_DELETE_FILE, aFilePath, "", "");
 
         return;
     }
 
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
     // Init File Info
     QFileInfo fileInfo(localPath);
-    // Init Current Dir
-    QDir currDir(QDir::homePath());
 
     // Check If Dir | Bundle
-    if (fileInfo.isDir() && fileInfo.isBundle()) {
+    if (fileInfo.isDir() || fileInfo.isBundle()) {
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
 
         // Go Thru Directory and Send Queue Items
         deleteDirectory(localPath);
 
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
     } else {
+        qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - aFilePath: " << aFilePath;
+
         // Init Result
-        bool result = false;
+        bool result = true;
+
+        // Init Current Dir
+        QDir dir(QDir::homePath());
 
         do  {
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
             // Make Remove File
-            result = currDir.remove(localPath);
+            result = dir.remove(localPath);
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Check Result
+            if (!result) {
+                // Send Error
+                sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
+            }
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+        } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+    }
+}
+
+//==============================================================================
+// Delete Directory - Generate File Delete Queue Items
+//==============================================================================
+void FileServerConnection::deleteDirectory(const QString& aDirPath)
+{
+    qDebug() << "FileServerConnection::deleteDirectory - cID: " << cID << " - aDirPath: " << aDirPath;
+
+    // Init Local Path
+    QString localPath(aDirPath);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Dir
+    QDir dir(localPath);
+
+    // Get File List
+    QStringList fileList = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Get File List Count
+    int flCount = fileList.count();
+
+    // Check File List Count
+    if (flCount <= 0) {
+
+        // Init Result
+        bool result = true;
+
+        // Send Started
+        //sendStarted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+        do  {
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Delete Dir
+            result = dir.rmdir(localPath);
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
 
             // Check Result
             if (!result) {
@@ -990,9 +1081,43 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
 
         } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
         // Send Finished
         sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+    } else {
+        // Check Local Path
+        if (!localPath.endsWith("/")) {
+            // Adjust Local Path
+            localPath += "/";
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Go Thru File List
+        for (int i=0; i<flCount; ++i) {
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Send Queue Item Found
+            sendFileOpQueueItemFound(DEFAULT_OPERATION_DELETE_FILE, localPath + fileList[i], "", "");
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_QUEUE, aDirPath, "", "");
     }
+
+    // ...
 }
 
 //==============================================================================
@@ -1091,11 +1216,31 @@ void FileServerConnection::copyFile(const QString& aSource, const QString& aTarg
 }
 
 //==============================================================================
+// Copy Directory - Generate File Copy Queue Items
+//==============================================================================
+void FileServerConnection::copyDirectory(const QString& aSourceDir, const QString& aTargetDir)
+{
+    qDebug() << "FileServerConnection::copyDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
+
+    // ...
+}
+
+//==============================================================================
 // Rename/Move File
 //==============================================================================
 void FileServerConnection::moveFile(const QString& aSource, const QString& aTarget)
 {
     qDebug() << "FileServerConnection::moveFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+
+    // ...
+}
+
+//==============================================================================
+// Move/Rename Directory - Generate File Move Queue Items
+//==============================================================================
+void FileServerConnection::moveDirectory(const QString& aSourceDir, const QString& aTargetDir)
+{
+    qDebug() << "FileServerConnection::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
 
     // ...
 }
@@ -1221,10 +1366,7 @@ void FileServerConnection::sendStarted(const QString& aOp,
 void FileServerConnection::sendProgress(const QString& aOp,
                                         const QString& aCurrFilePath,
                                         const quint64& aCurrProgress,
-                                        const quint64& aCurrTotal,
-                                        const quint64& aOverallProgress,
-                                        const quint64& aOverallTotal,
-                                        const int& aSpeed)
+                                        const quint64& aCurrTotal)
 {
     qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp << " - aCurrProgress: " << aCurrProgress << " - aCurrTotal: " << aCurrTotal;
 
@@ -1237,9 +1379,6 @@ void FileServerConnection::sendProgress(const QString& aOp,
     newDataMap[DEFAULT_KEY_PATH]            = aCurrFilePath;
     newDataMap[DEFAULT_KEY_CURRPROGRESS]    = aCurrProgress;
     newDataMap[DEFAULT_KEY_CURRTOTAL]       = aCurrTotal;
-    newDataMap[DEFAULT_KEY_OVERALLPROGRESS] = aOverallProgress;
-    newDataMap[DEFAULT_KEY_OVERALLTOTAL]    = aOverallTotal;
-    newDataMap[DEFAULT_KEY_SPEED]           = aSpeed;
 
     // ...
 
@@ -1482,7 +1621,10 @@ bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpe
             sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aFilePath, "", "", aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
 
             // Check Response
-            if (response == DEFAULT_CONFIRM_SKIP || response == DEFAULT_CONFIRM_CANCEL || response == DEFAULT_CONFIRM_ABORT) {
+            if (response == DEFAULT_CONFIRM_SKIP    ||
+                response == DEFAULT_CONFIRM_SKIPALL ||
+                response == DEFAULT_CONFIRM_CANCEL  ||
+                response == DEFAULT_CONFIRM_ABORT) {
 
                 // Send Finished
 
@@ -1599,90 +1741,6 @@ QDir::SortFlags FileServerConnection::parseSortFlags(const int& aSortFlags)
     }
 */
     return localSortFlags;
-}
-
-//==============================================================================
-// Delete Directory - Generate File Delete Queue Items
-//==============================================================================
-void FileServerConnection::deleteDirectory(const QString& aDirPath)
-{
-    qDebug() << "FileServerConnection::deleteDirectory - cID: " << cID << " - aDirPath: " << aDirPath;
-
-    // Init Local Path
-    QString localPath(aDirPath);
-
-    // Init Dir
-    QDir dir(localPath);
-
-    // Get File List
-    QStringList fileList = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
-
-    // Get File List Count
-    int flCount = fileList.count();
-
-    // Check File List Count
-    if (flCount <= 0) {
-
-        // Init Result
-        bool result = true;
-
-        do  {
-            // Delete Dir
-            //result = dir.remove(localPath);
-
-            // Check Result
-            if (!result) {
-                // Send Error
-                sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
-            }
-
-        } while (!result && response == DEFAULT_CONFIRM_RETRY);
-
-        // Send Finished
-        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
-    } else {
-        // Check Local Path
-        if (!localPath.endsWith("/")) {
-            // Adjust Local Path
-            localPath += "/";
-        }
-
-        // Go Thru File List
-        for (int i=0; i<flCount; ++i) {
-            // Send Queue Item Found
-            sendFileOpQueueItemFound(DEFAULT_OPERATION_DELETE_FILE, localPath + fileList[i], "", "");
-        }
-
-        // FOR TESTING TESTING TESTING
-
-        // Send Finished
-        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
-        // FOR TESTING TESTING TESTING
-    }
-
-    // ...
-}
-
-//==============================================================================
-// Copy Directory - Generate File Copy Queue Items
-//==============================================================================
-void FileServerConnection::copyDirectory(const QString& aSourceDir, const QString& aTargetDir)
-{
-    qDebug() << "FileServerConnection::copyDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
-
-    // ...
-}
-
-//==============================================================================
-// Move/Rename Directory - Generate File Move Queue Items
-//==============================================================================
-void FileServerConnection::moveDirectory(const QString& aSourceDir, const QString& aTargetDir)
-{
-    qDebug() << "FileServerConnection::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
-
-    // ...
 }
 
 //==============================================================================

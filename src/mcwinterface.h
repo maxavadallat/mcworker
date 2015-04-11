@@ -30,9 +30,6 @@
 #define DEFAULT_KEY_FILENAME                    "fn"
 #define DEFAULT_KEY_CURRPROGRESS                "cp"
 #define DEFAULT_KEY_CURRTOTAL                   "ct"
-#define DEFAULT_KEY_OVERALLPROGRESS             "op"
-#define DEFAULT_KEY_OVERALLTOTAL                "ot"
-#define DEFAULT_KEY_SPEED                       "spd"
 #define DEFAULT_KEY_SOURCE                      "src"
 #define DEFAULT_KEY_TARGET                      "trg"
 #define DEFAULT_KEY_PATH                        "path"
@@ -60,6 +57,7 @@
 #define DEFAULT_OPERATION_TREE_DIR              "TD"
 #define DEFAULT_OPERATION_MAKE_DIR              "MD"
 #define DEFAULT_OPERATION_DELETE_FILE           "DEL"
+#define DEFAULT_OPERATION_QUEUE                 "QUE"
 #define DEFAULT_OPERATION_SEARCH_FILE           "SRCH"
 #define DEFAULT_OPERATION_COPY_FILE             "CPY"
 #define DEFAULT_OPERATION_MOVE_FILE             "MV"
@@ -116,6 +114,7 @@
 #define DEFAULT_ERROR_HIDDEN                    0x0005
 #define DEFAULT_ERROR_SYSTEM                    0x0006
 #define DEFAULT_ERROR_ACCESS                    0x0007
+#define DEFAULT_ERROR_DISKFULL                  0x0008
 
 
 // Sort Flags
