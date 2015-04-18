@@ -72,6 +72,7 @@
 #define DEFAULT_OPERATION_PAUSE                 "PSE"
 #define DEFAULT_OPERATION_RESUME                "RSM"
 #define DEFAULT_OPERATION_CONTENT               "CNT"
+#define DEFAULT_OPERATION_CLEAR                 "CLR"
 
 #define DEFAULT_OPERATION_TEST                  "TEST"
 
@@ -98,6 +99,7 @@
 #define DEFAULT_RESPONSE_START                  "STRT"
 #define DEFAULT_RESPONSE_PROGRESS               "PRG"
 #define DEFAULT_RESPONSE_CONFIRM                "CNF"
+#define DEFAULT_RESPONSE_SKIP                   "SKP"
 #define DEFAULT_RESPONSE_READY                  "RDY"
 #define DEFAULT_RESPONSE_ABORT                  "ABRT"
 #define DEFAULT_RESPONSE_ERROR                  "ERR"
@@ -115,6 +117,7 @@
 #define DEFAULT_ERROR_SYSTEM                    0x0006
 #define DEFAULT_ERROR_ACCESS                    0x0007
 #define DEFAULT_ERROR_DISKFULL                  0x0008
+#define DEFAULT_ERROR_TARGET_DIR_NOT_EXISTS     0x0009
 
 
 // Sort Flags

@@ -25,6 +25,7 @@ enum FSCOperationType
     EFSCOTSuspend,
     EFSCOTResume,
     EFSCOTAcknowledge,
+    EFSCOTClearOpt,
 
 
     EFSCOTTest          = 0x00ff
@@ -106,6 +107,12 @@ protected slots:
                       const quint64& aCurrProgress,
                       const quint64& aCurrTotal);
 
+    // Send File Operation Skipped
+    void sendSkipped(const QString& aOp,
+                      const QString& aPath,
+                      const QString& aSource,
+                      const QString& aTarget);
+
     // Send File Operation Finished
     void sendFinished(const QString& aOp,
                       const QString& aPath,
@@ -151,6 +158,7 @@ protected slots:
 
     // Send File Search Item Item Found
     void sendFileSearchItemFound(const QString& aOp,
+                                 const QString& aPath,
                                  const QString& aFilePath);
 
 
@@ -214,12 +222,24 @@ protected slots: // FileServerConnectionWorker
     // Search File
     void searchFile(const QString& aName, const QString& aDirPath, const QString& aContent, const int& aOptions);
 
+
 protected:
 
-    // Check File Exists - Loop
-    bool checkFileExists(QString& aFilePath, const bool& aExpected);
-    // Check Dir Exists - Loop
-    bool checkDirExist(QString& aDirPath, const bool& aExpected);
+    // Check Source File Exists - Loop
+    bool checkSourceFileExists(QString& aFilePath, const bool& aExpected);
+    // Check Source Dir Exists - Loop
+    bool checkSourceDirExist(QString& aDirPath, const bool& aExpected);
+    // Check Target File Exist - Loop
+    bool checkTargetFileExist(QString& aFilePath, const bool& aExpected);
+    // Delete Source File
+    bool deleteSourceFile(const QString& aFilePath);
+    // Delete Target File
+    bool deleteTargetFile(const QString& aFilePath);
+
+    // Open Source File
+    bool openSourceFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile);
+    // Open Target File
+    bool openTargetFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile);
 
     // Parse Filters
     QDir::Filters parseFilters(const int& aFilters);
@@ -303,6 +323,9 @@ private:
     int                         sortFlags;
     // User Response
     int                         response;
+
+    // Global File Operation Options
+    int                         globalOptions;
 
     // Path
     QString                     path;

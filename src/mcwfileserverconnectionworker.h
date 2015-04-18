@@ -15,16 +15,16 @@ class FileServerConnection;
 //==============================================================================
 enum FSCWStatusType
 {
-    EFSCWSUnknown   = -1,
-    EFSCWSIdle      = 0,
-    EFSCWSBusy,
-    EFSCWSWaiting,
-    EFSCWSCancelling,
-    EFSCWSAborting,
-    EFSCWSAborted,
-    EFSCWSFinished,
-    EFSCWSExiting,
-    EFSCWSError     = 0xffff
+    EFSCWSUnknown       = -1,
+    EFSCWSIdle          = 0,
+    EFSCWSBusy          = 1,
+    EFSCWSWaiting       = 2,
+    EFSCWSCancelling    = 3,
+    EFSCWSAborting      = 4,
+    EFSCWSAborted       = 5,
+    EFSCWSFinished      = 6,
+    EFSCWSExiting       = 7,
+    EFSCWSError         = 0xffff
 };
 
 //==============================================================================

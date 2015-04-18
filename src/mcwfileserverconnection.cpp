@@ -7,6 +7,7 @@
 #include <QDialogButtonBox>
 #include <QDebug>
 #include <QTextStream>
+#include <QFile>
 
 #include <cstdio>
 #include <stdio.h>
@@ -45,6 +46,7 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QTcpSocket*
     , filters(0)
     , sortFlags(0)
     , response(0)
+    , globalOptions(0)
     , path("")
     , filePath("")
     , source("")
@@ -90,6 +92,7 @@ void FileServerConnection::init()
     operationMap[DEFAULT_OPERATION_PAUSE]       = EFSCOTSuspend;
     operationMap[DEFAULT_OPERATION_RESUME]      = EFSCOTResume;
     operationMap[DEFAULT_OPERATION_ACKNOWLEDGE] = EFSCOTAcknowledge;
+    operationMap[DEFAULT_OPERATION_CLEAR]       = EFSCOTClearOpt;
 
     operationMap[DEFAULT_OPERATION_TEST]        = EFSCOTTest;
 
@@ -346,7 +349,7 @@ void FileServerConnection::writeData(const QByteArray& aData, const bool& aFrame
         // Flush
         clientSocket->flush();
         // Wait For Bytes Written
-        //clientSocket->waitForBytesWritten();
+        clientSocket->waitForBytesWritten();
 
         // Write Error
         if (bytesWritten - (aFramed ? framePattern.size() * 2 : 0) != aData.size()) {
@@ -542,6 +545,12 @@ void FileServerConnection::processLastBuffer()
             qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
             // Handle Acknowledge
             handleAcknowledge();
+        break;
+
+        case EFSCOTClearOpt:
+            qDebug() << "#### FileServerConnection::processLastBuffer - cID: " << cID << " - CLEAROPTIONS!";
+            // Clear Global Options
+            globalOptions = 0;
         break;
 
         case EFSCOTUserResponse:
@@ -742,7 +751,6 @@ void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
 
             // Reset Abort Flag
             abortFlag = false;
-
         break;
 
         case EFSCWSCancelling:
@@ -820,18 +828,19 @@ void FileServerConnection::workerThreadFinished()
 //==============================================================================
 void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilters, const int& aSortFlags)
 {
-    //qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - aFilters: " << aFilters << " - aSortFlags: " << aSortFlags;
-
     // Init Local Path
     QString localPath = aDirPath;
 
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_LIST_DIR, localPath, "", "");
+
     // Check Dir Exists
-    if (!checkDirExist(localPath, true)) {
+    if (!checkSourceDirExist(localPath, true)) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_LIST_DIR, localPath, "", "");
+
         return;
     }
-
-    // Get Start Time
-    //QDateTime startTime = QDateTime::currentDateTimeUtc();
 
     // Check Abort Flag
     __CHECK_ABORTING;
@@ -883,11 +892,6 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
             continue;
         }
 
-        //qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - fileName: " << fileName;
-
-        //std::cout << ".";
-        //fflush(stdout);
-
         // Check Abort Flag
         __CHECK_ABORTING;
 
@@ -914,26 +918,31 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
 //==============================================================================
 void FileServerConnection::createDir(const QString& aDirPath)
 {
-    qDebug() << "FileServerConnection::createDir - cID: " << cID << " - aDirPath: " << aDirPath;
-
     // Init Local Path
     QString localPath = aDirPath;
 
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
+
     // Check Dir Exists
-    if (checkDirExist(localPath, false)) {
+    if (checkSourceDirExist(localPath, false)) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
 
         return;
     }
 
-    // Init Current Dir
-    QDir currDir(QDir::homePath());
+    qDebug() << "FileServerConnection::createDir - cID: " << cID << " - aDirPath: " << aDirPath;
+
+    // Init Dir
+    QDir dir(QDir::homePath());
 
     // Init Result
     bool result = false;
 
     do  {
         // Make Path
-        result = currDir.mkpath(localPath);
+        result = dir.mkpath(localPath);
 
         // Check Result
         if (!result) {
@@ -952,21 +961,17 @@ void FileServerConnection::createDir(const QString& aDirPath)
 //==============================================================================
 void FileServerConnection::deleteFile(const QString& aFilePath)
 {
-    // Send Started
-    sendStarted(DEFAULT_OPERATION_DELETE_FILE, aFilePath, "", "");
-
     // Init Local Path
-    QString localPath = aFilePath;
+    QString localPath(aFilePath);
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
 
     // Check Abort Flag
     __CHECK_ABORTING;
 
-
     // Check File Exists
-    if (!checkFileExists(localPath, true)) {
-
-        // Send Finished
-        sendAborted(DEFAULT_OPERATION_DELETE_FILE, aFilePath, "", "");
+    if (!checkSourceFileExists(localPath, true)) {
 
         return;
     }
@@ -990,7 +995,7 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
         __CHECK_ABORTING;
 
     } else {
-        qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - aFilePath: " << aFilePath;
+        qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - localPath: " << localPath;
 
         // Init Result
         bool result = true;
@@ -1033,8 +1038,6 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
 //==============================================================================
 void FileServerConnection::deleteDirectory(const QString& aDirPath)
 {
-    qDebug() << "FileServerConnection::deleteDirectory - cID: " << cID << " - aDirPath: " << aDirPath;
-
     // Init Local Path
     QString localPath(aDirPath);
 
@@ -1056,14 +1059,12 @@ void FileServerConnection::deleteDirectory(const QString& aDirPath)
     // Check File List Count
     if (flCount <= 0) {
 
+        qDebug() << "FileServerConnection::deleteDirectory - cID: " << cID << " - localPath: " << localPath;
+
         // Init Result
         bool result = true;
 
-        // Send Started
-        //sendStarted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
         do  {
-
             // Check Abort Flag
             __CHECK_ABORTING;
 
@@ -1088,6 +1089,45 @@ void FileServerConnection::deleteDirectory(const QString& aDirPath)
         sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
 
     } else {
+        // Check Global Options
+        if (globalOptions & DEFAULT_CONFIRM_NOALL) {
+            // Send Skipped
+            sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+            return;
+        }
+
+        // Send Confirm
+        sendfileOpNeedConfirm(DEFAULT_OPERATION_DELETE_FILE, DEFAULT_ERROR_NON_EMPTY, localPath, "", "");
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+            // Send Aborted
+            sendAborted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+            return;
+        }
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_NO) {
+            // Send Skipped
+            sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+            return;
+        }
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_NOALL) {
+            // Add To Global Options
+            globalOptions |= DEFAULT_CONFIRM_NOALL;
+
+            // Send Skipped
+            sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+
+            return;
+        }
+
+
         // Check Local Path
         if (!localPath.endsWith("/")) {
             // Adjust Local Path
@@ -1116,8 +1156,6 @@ void FileServerConnection::deleteDirectory(const QString& aDirPath)
         // Send Finished
         sendFinished(DEFAULT_OPERATION_QUEUE, aDirPath, "", "");
     }
-
-    // ...
 }
 
 //==============================================================================
@@ -1164,13 +1202,16 @@ void FileServerConnection::scanDirSize(const QString& aDirPath)
     // Init Local Path
     QString localPath = aDirPath;
 
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_SCAN_DIR, localPath, "", "");
+
     // Check File Exists
-    if (!checkFileExists(localPath, true)) {
+    if (!checkSourceFileExists(localPath, true)) {
 
         return;
     }
 
-    qDebug() << "FileServerConnection::scanDirSize - cID: " << cID << " - aDirPath: " << aDirPath;
+    qDebug() << "FileServerConnection::scanDirSize - cID: " << cID << " - localPath: " << localPath;
 
     // Check Abort Flag
     __CHECK_ABORTING;
@@ -1192,7 +1233,7 @@ void FileServerConnection::scanDirSize(const QString& aDirPath)
     __CHECK_ABORTING;
 
     // Send Finished
-    sendFinished(DEFAULT_OPERATION_LIST_DIR, localPath, "", "");
+    sendFinished(DEFAULT_OPERATION_SCAN_DIR, localPath, "", "");
 }
 
 //==============================================================================
@@ -1200,9 +1241,18 @@ void FileServerConnection::scanDirSize(const QString& aDirPath)
 //==============================================================================
 void FileServerConnection::scanDirTree(const QString& aDirPath)
 {
-    qDebug() << "FileServerConnection::scanDirTree - cID: " << cID << " - aDirPath: " << aDirPath;
+    // Init Local Path
+    QString localPath = aDirPath;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_TREE_DIR, localPath, "", "");
+
+    qDebug() << "FileServerConnection::scanDirTree - cID: " << cID << " - localPath: " << localPath;
 
     // ...
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_TREE_DIR, localPath, "", "");
 }
 
 //==============================================================================
@@ -1210,7 +1260,185 @@ void FileServerConnection::scanDirTree(const QString& aDirPath)
 //==============================================================================
 void FileServerConnection::copyFile(const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    // Init Local Source
+    QString localSource(aSource);
+    // Init Local Target
+    QString localTarget(aTarget);
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Source File Exists
+    if (!checkSourceFileExists(localSource, true)) {
+
+        // Send Finished
+        sendAborted(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget);
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Source Info
+    QFileInfo sourceInfo(localSource);
+
+    // Check Source Info
+    if (sourceInfo.isDir() || sourceInfo.isBundle()) {
+
+        // Copy Directory
+        copyDirectory(localSource, localTarget);
+
+    } else {
+        qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Check Target File Exists
+        if (checkTargetFileExist(localTarget, false)) {
+
+            return;
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Init Source File
+        QFile sourceFile(localSource);
+        // Init Target File
+        QFile targetFile(localTarget);
+
+        // Open Source File
+        bool sourceOpened = openSourceFile(localSource, localTarget, sourceFile);
+
+        // Check Source Opened
+        if (!sourceOpened) {
+
+            return;
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Open Target File
+        bool targetOpened = openTargetFile(localSource, localTarget, targetFile);
+
+        // Check Target Opened
+        if (!targetOpened) {
+
+            // Close Source File
+            sourceFile.close();
+
+            return;
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Init Remaining Data Size
+        qint64 remainingDataSize = sourceInfo.size();
+        // Init Bytes Written
+        qint64 bytesWritten = 0;
+        // Init Buffer Bytes To Read
+        qint64 bufferBytesToRead = 0;
+        // Init Buffer Bytes To Write
+        qint64 bufferBytesToWrite = 0;
+        // Init Buffer Bytes Written
+        qint64 bufferBytesWritten = 0;
+
+        // Init Buffer
+        char buffer[DEFAULT_FILE_TRANSFER_BUFFER_SIZE];
+
+        // Loop Until There is Remaining Data Size
+        while (remainingDataSize > 0 && bytesWritten < sourceInfo.size()) {
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Clear Buffer
+            memset(&buffer, 0, sizeof(buffer));
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Calculate Bytes To Read
+            bufferBytesToRead = qMin(remainingDataSize, (qint64)sizeof(buffer));
+
+            do {
+                // Check Abort Flag
+                __CHECK_ABORTING;
+
+                // Read To Buffer From Source File
+                bufferBytesToWrite = sourceFile.read(buffer, bufferBytesToRead);
+
+                // Check Buffer Bytes To Write
+                if (bufferBytesToWrite != bufferBytesToRead) {
+                    // Send Error
+                    sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+                }
+
+            } while (bufferBytesToWrite != bufferBytesToRead && response == DEFAULT_CONFIRM_RETRY);
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Check Bytes To Write
+            if (bufferBytesToWrite > 0) {
+
+                do {
+                    // Check Abort Flag
+                    __CHECK_ABORTING;
+
+                    // Write Buffer To Target File
+                    bufferBytesWritten = targetFile.write(buffer, bufferBytesToWrite);
+
+                    // Check Buffer Bytes Written
+                    if (bufferBytesWritten != bufferBytesToWrite) {
+                        // Send Error
+                        sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+                    }
+
+                } while (bufferBytesWritten != bufferBytesToWrite && response == DEFAULT_CONFIRM_RETRY);
+
+            } else {
+                qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget << " - NO BYTES TO WRITE?!??";
+
+                break;
+            }
+
+            // Sleep a bit...
+            //QThread::currentThread()->usleep(1);
+
+            // Inc Bytes Writtem
+            bytesWritten += bufferBytesWritten;
+
+            // Dec Remaining Data Size
+            remainingDataSize -= bufferBytesWritten;
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            //qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - bytesWritten: " << bytesWritten << " - remainingDataSize: " << remainingDataSize;
+
+            // Send Progress
+            sendProgress(DEFAULT_OPERATION_COPY_FILE, localSource, bytesWritten, sourceInfo.size());
+        }
+
+        // Close Target File
+        targetFile.close();
+        // Close Source File
+        sourceFile.close();
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
+    }
 
     // ...
 }
@@ -1220,7 +1448,71 @@ void FileServerConnection::copyFile(const QString& aSource, const QString& aTarg
 //==============================================================================
 void FileServerConnection::copyDirectory(const QString& aSourceDir, const QString& aTargetDir)
 {
-    qDebug() << "FileServerConnection::copyDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
+    // Init Local Source
+    QString localSource(aSourceDir);
+    // Init Local Target
+    QString localTarget(aTargetDir);
+
+    qDebug() << "FileServerConnection::copyDirectory - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
+
+    // Init Success
+    bool success = false;
+
+    // Init Target Dir
+    QDir targetDir(localTarget);
+
+    do {
+        // Make Path
+        success = targetDir.mkpath(localTarget);
+        // Check Success
+        if (!success) {
+            // Send Error
+            sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+    // Check Response
+    if (response == DEFAULT_CONFIRM_ABORT) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget);
+
+        return;
+    }
+
+    // Init Source Dir
+    QDir sourceDir(localSource);
+
+    // Get Entry List
+    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+
+    // Get Entry List Count
+    int selCount = sourceEntryList.count();
+
+    // Check Local Source
+    if (!localSource.endsWith("/")) {
+        // Adjust Local Source
+        localSource += "/";
+    }
+
+    // Check Local Target
+    if (!localTarget.endsWith("/")) {
+        // Adjust Local Target
+        localTarget += "/";
+    }
+
+    // Go Thru Source Dir Entry List
+    for (int i=0; i<selCount; ++i) {
+        // Get File Name
+        QString fileName = sourceEntryList[i];
+
+        // Send File Operation Queue Item Found
+        sendFileOpQueueItemFound(DEFAULT_OPERATION_COPY_FILE, "", localSource + fileName, localTarget + fileName);
+    }
+
+    // ...
+
+    sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSourceDir, aTargetDir);
 
     // ...
 }
@@ -1368,7 +1660,7 @@ void FileServerConnection::sendProgress(const QString& aOp,
                                         const quint64& aCurrProgress,
                                         const quint64& aCurrTotal)
 {
-    qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp << " - aCurrProgress: " << aCurrProgress << " - aCurrTotal: " << aCurrTotal;
+    //qDebug() << "FileServerConnection::sendProgress - aOp: " << aOp << " - aCurrProgress: " << aCurrProgress << " - aCurrTotal: " << aCurrTotal;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -1379,11 +1671,48 @@ void FileServerConnection::sendProgress(const QString& aOp,
     newDataMap[DEFAULT_KEY_PATH]            = aCurrFilePath;
     newDataMap[DEFAULT_KEY_CURRPROGRESS]    = aCurrProgress;
     newDataMap[DEFAULT_KEY_CURRTOTAL]       = aCurrTotal;
+    newDataMap[DEFAULT_KEY_RESPONSE]        = QString(DEFAULT_RESPONSE_PROGRESS);
 
     // ...
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
+
+    // Wait
+    //worker->wait();
+}
+
+//==============================================================================
+// Send File Operation Skipped
+//==============================================================================
+void FileServerConnection::sendSkipped(const QString& aOp,
+                                       const QString& aPath,
+                                       const QString& aSource,
+                                       const QString& aTarget)
+{
+    qDebug() << "FileServerConnection::sendSkipped - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
+
+    // Init New Data
+    QVariantMap newDataMap;
+
+    // Set Up New Data
+    newDataMap[DEFAULT_KEY_CID]        = cID;
+    newDataMap[DEFAULT_KEY_OPERATION]  = aOp;
+    newDataMap[DEFAULT_KEY_PATH]       = aPath;
+    newDataMap[DEFAULT_KEY_SOURCE]     = aSource;
+    newDataMap[DEFAULT_KEY_TARGET]     = aTarget;
+    newDataMap[DEFAULT_KEY_RESPONSE]   = QString(DEFAULT_RESPONSE_SKIP);
+
+    // ...
+
+    // Write Data With Signal
+    writeDataWithSignal(newDataMap);
+
+    // Check Worker
+    if (worker) {
+        // Set Status
+        worker->setStatus(EFSCWSFinished);
+    }
 }
 
 //==============================================================================
@@ -1391,7 +1720,7 @@ void FileServerConnection::sendProgress(const QString& aOp,
 //==============================================================================
 void FileServerConnection::sendFinished(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp;
+    qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -1478,6 +1807,8 @@ int FileServerConnection::sendError(const QString& aOp, const QString& aPath, co
 //==============================================================================
 void FileServerConnection::sendfileOpNeedConfirm(const QString& aOp, const int& aCode, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
+    qDebug() << "FileServerConnection::sendfileOpNeedConfirm - aOp: " << aOp << " - aSource: " << aSource << " - aTarget: " << aTarget << " - aCode: " << aCode;
+
     // Init New Data Map
     QVariantMap newDataMap;
 
@@ -1504,6 +1835,8 @@ void FileServerConnection::sendfileOpNeedConfirm(const QString& aOp, const int& 
 //==============================================================================
 void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const quint64& aNumDirs, const quint64& aNumFiles, const quint64& aScannedSize)
 {
+    //qDebug() << "FileServerConnection::sendDirSizeScanProgress - aPath: " << aPath << " - aNumDirs: " << aNumDirs << " - aNumFiles: " << aNumFiles << " - aScannedSize: " << aScannedSize;
+
     // Init New Data Map
     QVariantMap newDataMap;
 
@@ -1529,6 +1862,8 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
 //==============================================================================
 void FileServerConnection::sendDirListItemFound(const QString& aPath, const QString& aFileName)
 {
+    //qDebug() << "FileServerConnection::sendDirListItemFound - aPath: " << aPath << " - aFileName: " << aFileName;
+
     // Init New Data Map
     QVariantMap newDataMap;
 
@@ -1552,6 +1887,8 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
 //==============================================================================
 void FileServerConnection::sendFileOpQueueItemFound(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
+    //qDebug() << "FileServerConnection::sendFileOpQueueItemFound - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
+
     // Init New Data Map
     QVariantMap newDataMap;
 
@@ -1575,18 +1912,19 @@ void FileServerConnection::sendFileOpQueueItemFound(const QString& aOp, const QS
 //==============================================================================
 // Send File Search Item Item Found
 //==============================================================================
-void FileServerConnection::sendFileSearchItemFound(const QString& aOp, const QString& aFilePath)
+void FileServerConnection::sendFileSearchItemFound(const QString& aOp, const QString& aPath, const QString& aFilePath)
 {
+    //qDebug() << "FileServerConnection::sendFileSearchItemFound - aOp: " << aOp << " - aPath: " << aPath << " - aFilePath: " << aFilePath;
+
     // Init New Data Map
     QVariantMap newDataMap;
 
     // Setup New Data Map
     newDataMap[DEFAULT_KEY_CID]         = cID;
     newDataMap[DEFAULT_KEY_OPERATION]   = aOp;
-    newDataMap[DEFAULT_KEY_PATH]        = aFilePath;
+    newDataMap[DEFAULT_KEY_PATH]        = aPath;
+    newDataMap[DEFAULT_KEY_FILENAME]    = aFilePath;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_SEARCH);
-
-    // ...
 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
@@ -1598,49 +1936,77 @@ void FileServerConnection::sendFileSearchItemFound(const QString& aOp, const QSt
 //==============================================================================
 // Check File Exists - Loop
 //==============================================================================
-bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpected)
+bool FileServerConnection::checkSourceFileExists(QString& aSourcePath, const bool& aExpected)
 {
     // Init Dir Info
-    QFileInfo fileInfo(aFilePath);
-    // Get Dir Exists
+    QFileInfo fileInfo(aSourcePath);
+    // Get File Exists
     bool fileExits = fileInfo.exists();
 
+    // Check File Exists
+    if (fileExits == aExpected) {
+        return aExpected;
+    }
+
+    // Check Global Options
+    if (globalOptions & DEFAULT_CONFIRM_SKIPALL) {
+
+        // Send Skipped
+        sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSourcePath, aSourcePath, lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+
+        return fileExits;
+    }
+
     do  {
-        // Check File Exists
-        if (fileExits != aExpected) {
-
-            qWarning() << "FileServerConnection::checkFileExists - aFilePath: " << aFilePath << " - aExpected: " << aExpected;
-
-            // Check Worker
-            if (worker) {
-                // Set Worker Status
-                worker->setStatus(EFSCWSError);
-            }
-
-            // Send Error & Wait For Response
-            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aFilePath, "", "", aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
-
-            // Check Response
-            if (response == DEFAULT_CONFIRM_SKIP    ||
-                response == DEFAULT_CONFIRM_SKIPALL ||
-                response == DEFAULT_CONFIRM_CANCEL  ||
-                response == DEFAULT_CONFIRM_ABORT) {
-
-                // Send Finished
-
-                return !aExpected;
-            }
-
-            // Check Response
-            if (response == DEFAULT_CONFIRM_RETRY) {
-                // Update Dir Path
-                aFilePath = lastOperationDataMap[DEFAULT_KEY_PATH].toString();
-                // Update Dir Info
-                fileInfo = QFileInfo(aFilePath);
-                // Update Dir Exists
-                fileExits = fileInfo.exists();
-            }
+        // Check Worker
+        if (worker) {
+            // Set Worker Status
+            worker->setStatus(EFSCWSError);
         }
+
+        // Send Error & Wait For Response
+        sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSourcePath, aSourcePath, lastOperationDataMap[DEFAULT_KEY_TARGET].toString(), aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+
+            // Send Aborted
+            sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSourcePath, aSourcePath, lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+
+            return fileExits;
+        }
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_SKIPALL) {
+            // Set Global Options
+            globalOptions |= DEFAULT_CONFIRM_SKIPALL;
+
+            // Send Skipped
+            sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSourcePath, aSourcePath, lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+
+            return fileExits;
+        }
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_SKIP    ||
+            response == DEFAULT_CONFIRM_CANCEL) {
+
+            // Send Skipped
+            sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSourcePath, aSourcePath, lastOperationDataMap[DEFAULT_KEY_TARGET].toString());
+
+            return fileExits;
+        }
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_RETRY) {
+            // Update Dir Path
+            aSourcePath = lastOperationDataMap[DEFAULT_KEY_PATH].toString();
+            // Update Dir Info
+            fileInfo = QFileInfo(aSourcePath);
+            // Update Dir Exists
+            fileExits = fileInfo.exists();
+        }
+
     } while ((fileExits != aExpected) && (response == DEFAULT_CONFIRM_RETRY));
 
     return fileExits;
@@ -1649,55 +2015,234 @@ bool FileServerConnection::checkFileExists(QString& aFilePath, const bool& aExpe
 //==============================================================================
 // Check Dir Exists - Loop
 //==============================================================================
-bool FileServerConnection::checkDirExist(QString& aDirPath, const bool& aExpected)
+bool FileServerConnection::checkSourceDirExist(QString& aDirPath, const bool& aExpected)
 {
-    return checkFileExists(aDirPath, aExpected);
+    return checkSourceFileExists(aDirPath, aExpected);
+}
 
-/*
+//==============================================================================
+// Check Target File Exist - Loop
+//==============================================================================
+bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool& aExpected)
+{
     // Init Dir Info
-    QFileInfo dirInfo(aDirPath);
-    // Get Dir Exists
-    bool dirExits = dirInfo.exists();
+    QFileInfo fileInfo(aTargetPath);
+    // Get File Exists
+    bool fileExits = fileInfo.exists();
 
-    do  {
-        // Check Dir Exists
-        if (dirExits != aExpected) {
+    // Check Expected
+    if (fileExits == aExpected) {
+        return aExpected;
+    }
 
-            qWarning() << "FileServerConnection::checkDirExist - aDirPath: " << aDirPath << " - aExpected: " << aExpected;
+    // Check Global Options
+    if (globalOptions & DEFAULT_CONFIRM_SKIPALL) {
+        // Send Skipped
+        sendSkipped(DEFAULT_OPERATION_COPY_FILE, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
-            // Check Worker
-            if (worker) {
-                // Set Worker Status
-                worker->setStatus(EFSCWSError);
+        return fileExits;
+    }
+
+    // Check Global Options
+    if (globalOptions & DEFAULT_CONFIRM_NOALL) {
+        // Send Skipped
+        sendSkipped(DEFAULT_OPERATION_COPY_FILE, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
+
+        return fileExits;
+    }
+
+    // Check If Exist
+    if (fileInfo.exists()) {
+        // Check Global Options
+        if (globalOptions & DEFAULT_CONFIRM_YESALL) {
+            // Delete Target File
+            if (!aExpected && deleteTargetFile(aTargetPath)) {
+
+                return aExpected;
             }
+        } else {
+            // Send Need Confirm To Overwrite
+            sendfileOpNeedConfirm(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), DEFAULT_ERROR_EXISTS, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
-            // Send Error & Wait For Response
-            sendError(operation, aDirPath, "", "", aExpected ? DEFAULT_ERROR_NOTEXISTS : DEFAULT_ERROR_EXISTS);
+            // Switch Response
+            switch (response) {
+                case DEFAULT_CONFIRM_YESALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_YESALL;
+                case DEFAULT_CONFIRM_YES:
+                    // Delete Target File
+                    if (!aExpected && deleteTargetFile(aTargetPath)) {
 
-            // Check Response
-            if (response == DEFAULT_CONFIRM_SKIP || response == DEFAULT_CONFIRM_CANCEL || response == DEFAULT_CONFIRM_ABORT) {
+                        return aExpected;
+                    }
+                break;
 
-                // Send Finished
+                case DEFAULT_CONFIRM_NOALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_NOALL;
+                case DEFAULT_CONFIRM_NO:
+                    // Send Skipped
+                    sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
+                break;
 
-                return !aExpected;
-            }
+                case DEFAULT_CONFIRM_ABORT:
+                    // Send Aborted
+                    sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
+                break;
 
-            // Check Response
-            if (response == DEFAULT_CONFIRM_OK || response == DEFAULT_CONFIRM_RETRY) {
-                // Update Dir Path
-                aDirPath = lastOperationDataMap[DEFAULT_KEY_PATH].toString();
-                // Update Dir Info
-                dirInfo = QFileInfo(aDirPath);
-                // Update Dir Exists
-                dirExits = dirInfo.exists();
-                // Reset Response
-                response = DEFAULT_CONFIRM_RETRY;
+                default:
+                break;
             }
         }
-    } while ((dirExits != aExpected) && (response == DEFAULT_CONFIRM_RETRY));
+    }
 
-    return dirExits;
-*/
+    return fileExits;
+}
+
+//==============================================================================
+// Delete Source File
+//==============================================================================
+bool FileServerConnection::deleteSourceFile(const QString& aFilePath)
+{
+    // Init Success
+    bool success = false;
+
+    // Init Dir
+    QDir dir(QDir::homePath());
+
+    do {
+        // Remove File
+        success = dir.remove(aFilePath);
+
+        // Check Success
+        if (!success) {
+            // Send Error
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aFilePath, lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+    return success;
+}
+
+//==============================================================================
+// Delete Target File
+//==============================================================================
+bool FileServerConnection::deleteTargetFile(const QString& aFilePath)
+{
+    // Init Success
+    bool success = false;
+
+    // Init Dir
+    QDir dir(QDir::homePath());
+
+    do {
+        // Remove File
+        success = dir.remove(aFilePath);
+
+        // Check Success
+        if (!success) {
+            // Send Error
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aFilePath, DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+    return success;
+}
+
+//==============================================================================
+// Open Source File
+//==============================================================================
+bool FileServerConnection::openSourceFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile)
+{
+    // Init Source Opened
+    bool sourceOpened = false;
+
+    do {
+        // Check Abort Flag
+        __CHECK_ABORTING false;
+
+        // Open Source File
+        sourceOpened = aFile.open(QIODevice::ReadOnly);
+
+        // Check Success
+        if (!sourceOpened) {
+            // Send Error
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSourcePath, aTargetPath, DEFAULT_ERROR_GENERAL);
+
+            // Check Response
+            if (response == DEFAULT_CONFIRM_ABORT) {
+
+                // Send Aborted
+                sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSourcePath, aTargetPath);
+
+                return false;
+            }
+        }
+    } while (!sourceOpened && response == DEFAULT_CONFIRM_RETRY);
+
+    return sourceOpened;
+}
+
+//==============================================================================
+// Open Target File
+//==============================================================================
+bool FileServerConnection::openTargetFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile)
+{
+    // Init Target Opened
+    bool targetOpened = false;
+
+    // Init Target Info
+    QFileInfo targetInfo(aTargetPath);
+
+    // Check Target File Directory
+    if (!QFile::exists(targetInfo.absolutePath())) {
+
+        // Need Confirm
+        sendfileOpNeedConfirm(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), DEFAULT_ERROR_TARGET_DIR_NOT_EXISTS, targetInfo.absolutePath(), aSourcePath, aTargetPath);
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_YES || response == DEFAULT_CONFIRM_YESALL) {
+            // Init Success
+            bool success = false;
+
+            // Create Target File Dir
+            do  {
+                // Init Directory
+                QDir dir(QDir::homePath());
+
+                // Make Path
+                success = dir.mkpath(targetInfo.absolutePath());
+
+            } while (!success && response == DEFAULT_CONFIRM_RETRY);
+        }
+    }
+
+    do {
+        // Check Abort Flag
+        __CHECK_ABORTING false;
+
+        // Open Target File
+        targetOpened = aFile.open(QIODevice::WriteOnly);
+
+        // Check Target Opened
+        if (!targetOpened) {
+            // Send Error
+            sendError(DEFAULT_OPERATION_COPY_FILE, "", aSourcePath, aTargetPath, DEFAULT_ERROR_GENERAL);
+
+            // Check Response
+            if (response == DEFAULT_CONFIRM_ABORT) {
+
+                // Send Aborted
+                sendAborted(DEFAULT_OPERATION_COPY_FILE, "", aSourcePath, aTargetPath);
+
+                return false;
+            }
+        }
+    } while (!targetOpened && response == DEFAULT_CONFIRM_RETRY);
+
+    return targetOpened;
 }
 
 //==============================================================================

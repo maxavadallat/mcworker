@@ -17,5 +17,9 @@
 
 
 
+#define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           8192
+
+
+
 #endif // CONSTANTS
 
