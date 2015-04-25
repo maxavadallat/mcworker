@@ -198,7 +198,7 @@ protected slots: // FileServerConnectionWorker
     // Create Directory
     void createDir(const QString& aDirPath);
     // Delete File/Directory
-    void deleteFile(const QString& aFilePath);
+    void deleteEntry(const QString& aFilePath);
 
     // Set File Permissions
     void setFilePermissions(const QString& aFilePath, const int& aPermissions);
@@ -215,13 +215,12 @@ protected slots: // FileServerConnectionWorker
     void scanDirTree(const QString& aDirPath);
 
     // Copy File
-    void copyFile(const QString& aSource, const QString& aTarget);
+    void copy(const QString& aSource, const QString& aTarget);
     // Rename/Move File
-    void moveFile(const QString& aSource, const QString& aTarget);
+    void move(const QString& aSource, const QString& aTarget);
 
     // Search File
     void searchFile(const QString& aName, const QString& aDirPath, const QString& aContent, const int& aOptions);
-
 
 protected:
 
@@ -240,6 +239,13 @@ protected:
     bool openSourceFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile);
     // Open Target File
     bool openTargetFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile);
+
+    // Copy File
+    void copyFile(QString& aSource, QString& aTarget);
+    // Delete File
+    void deleteFile(QString& aFilePath);
+    // Rename File
+    void renameFile(QString& aSource, QString& aTarget);
 
     // Parse Filters
     QDir::Filters parseFilters(const int& aFilters);

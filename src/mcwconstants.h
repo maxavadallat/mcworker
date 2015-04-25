@@ -20,6 +20,20 @@
 #define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           8192
 
 
+#if defined (Q_OS_OSX)
+
+#define DEFAULT_VOLUMES_PATH                                        "/Volumes/"
+
+#elif defined (Q_OS_UNIX)
+
+#define DEFAULT_VOLUMES_PATH                                        "/Media/"
+
+#elif defined (Q_OS_WIN)
+
+#define DEFAULT_VOLUMES_PATH                                        "/"
+
+#endif // Q_OS_WIN
+
 
 #endif // CONSTANTS
 

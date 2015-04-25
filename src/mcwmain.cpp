@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QStorageInfo>
 #include <QDebug>
 
 #include "mcwfileserver.h"
@@ -9,7 +10,7 @@
 //==============================================================================
 // Main
 //==============================================================================
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     qDebug() << " ";
     qDebug() << "================================================================================";
@@ -42,3 +43,5 @@ int main(int argc, char *argv[])
     // Execute Applicaiton
     return result;
 }
+
+

@@ -548,7 +548,7 @@ void FileServerConnection::processLastBuffer()
         break;
 
         case EFSCOTClearOpt:
-            qDebug() << "#### FileServerConnection::processLastBuffer - cID: " << cID << " - CLEAROPTIONS!";
+            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - CLEAROPTIONS!";
             // Clear Global Options
             globalOptions = 0;
         break;
@@ -687,7 +687,7 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
 
         case EFSCOTDeleteFile:
             // Delete File
-            deleteFile(path);
+            deleteEntry(path);
         break;
 
         case EFSCOTTreeDir:
@@ -702,12 +702,12 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
 
         case EFSCOTCopyFile:
             // Copy File
-            copyFile(source, target);
+            copy(source, target);
         break;
 
         case EFSCOTMoveFile:
             // Move/Rename File
-            moveFile(source, target);
+            move(source, target);
         break;
 
         default:
@@ -959,7 +959,7 @@ void FileServerConnection::createDir(const QString& aDirPath)
 //==============================================================================
 // Delete File/Directory
 //==============================================================================
-void FileServerConnection::deleteFile(const QString& aFilePath)
+void FileServerConnection::deleteEntry(const QString& aFilePath)
 {
     // Init Local Path
     QString localPath(aFilePath);
@@ -995,42 +995,55 @@ void FileServerConnection::deleteFile(const QString& aFilePath)
         __CHECK_ABORTING;
 
     } else {
-        qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - localPath: " << localPath;
-
-        // Init Result
-        bool result = true;
-
-        // Init Current Dir
-        QDir dir(QDir::homePath());
-
-        do  {
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Make Remove File
-            result = dir.remove(localPath);
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Check Result
-            if (!result) {
-                // Send Error
-                sendError(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "", DEFAULT_ERROR_GENERAL);
-            }
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-        } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
         // Check Abort Flag
         __CHECK_ABORTING;
 
-        // Send Finished
-        sendFinished(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+        // Delete File
+        deleteFile(localPath);
     }
+}
+
+//==============================================================================
+// Delete File
+//==============================================================================
+void FileServerConnection::deleteFile(QString& aFilePath)
+{
+    qDebug() << "FileServerConnection::deleteFile - cID: " << cID << " - aFilePath: " << aFilePath;
+
+    // Init Result
+    bool result = true;
+
+    // Init Current Dir
+    QDir dir(QDir::homePath());
+
+    do  {
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Make Remove File
+        result = dir.remove(aFilePath);
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Check Result
+        if (!result) {
+            // Send Error
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aFilePath, aFilePath, "", DEFAULT_ERROR_GENERAL);
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+    } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_DELETE_FILE, aFilePath, "", "");
 }
 
 //==============================================================================
@@ -1258,7 +1271,7 @@ void FileServerConnection::scanDirTree(const QString& aDirPath)
 //==============================================================================
 // Copy File
 //==============================================================================
-void FileServerConnection::copyFile(const QString& aSource, const QString& aTarget)
+void FileServerConnection::copy(const QString& aSource, const QString& aTarget)
 {
     // Init Local Source
     QString localSource(aSource);
@@ -1273,9 +1286,6 @@ void FileServerConnection::copyFile(const QString& aSource, const QString& aTarg
 
     // Check Source File Exists
     if (!checkSourceFileExists(localSource, true)) {
-
-        // Send Finished
-        sendAborted(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget);
 
         return;
     }
@@ -1293,154 +1303,213 @@ void FileServerConnection::copyFile(const QString& aSource, const QString& aTarg
         copyDirectory(localSource, localTarget);
 
     } else {
-        qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
+        //qDebug() << "FileServerConnection::copy - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
 
-        // Check Abort Flag
-        __CHECK_ABORTING;
+        // Copy File
+        copyFile(localSource, localTarget);
 
-        // Check Target File Exists
-        if (checkTargetFileExist(localTarget, false)) {
+    }
 
-            return;
-        }
+    // ...
+}
 
-        // Check Abort Flag
-        __CHECK_ABORTING;
+//==============================================================================
+// Copy File
+//==============================================================================
+void FileServerConnection::copyFile(QString& aSource, QString& aTarget)
+{
+    // Check Abort Flag
+    __CHECK_ABORTING;
 
-        // Init Source File
-        QFile sourceFile(localSource);
-        // Init Target File
-        QFile targetFile(localTarget);
+    // Check Target File Exists
+    if (checkTargetFileExist(aTarget, false)) {
 
-        // Open Source File
-        bool sourceOpened = openSourceFile(localSource, localTarget, sourceFile);
+        return;
+    }
 
-        // Check Source Opened
-        if (!sourceOpened) {
+    // Check Abort Flag
+    __CHECK_ABORTING;
 
-            return;
-        }
+    // Init Source File
+    QFile sourceFile(aSource);
+    // Init Target File
+    QFile targetFile(aTarget);
 
-        // Check Abort Flag
-        __CHECK_ABORTING;
+    // Open Source File
+    bool sourceOpened = openSourceFile(aSource, aTarget, sourceFile);
 
-        // Open Target File
-        bool targetOpened = openTargetFile(localSource, localTarget, targetFile);
+    // Check Source Opened
+    if (!sourceOpened) {
 
-        // Check Target Opened
-        if (!targetOpened) {
+        return;
+    }
 
-            // Close Source File
-            sourceFile.close();
+    // Check Abort Flag
+    if (abortFlag) {
+        // Close Source File
+        sourceFile.close();
+        return;
+    }
 
-            return;
-        }
+    // Open Target File
+    bool targetOpened = openTargetFile(aSource, aTarget, targetFile);
 
-        // Check Abort Flag
-        __CHECK_ABORTING;
+    // Check Target Opened
+    if (!targetOpened) {
 
-        // Init Remaining Data Size
-        qint64 remainingDataSize = sourceInfo.size();
-        // Init Bytes Written
-        qint64 bytesWritten = 0;
-        // Init Buffer Bytes To Read
-        qint64 bufferBytesToRead = 0;
-        // Init Buffer Bytes To Write
-        qint64 bufferBytesToWrite = 0;
-        // Init Buffer Bytes Written
-        qint64 bufferBytesWritten = 0;
+        // Close Source File
+        sourceFile.close();
 
-        // Init Buffer
-        char buffer[DEFAULT_FILE_TRANSFER_BUFFER_SIZE];
+        return;
+    }
 
-        // Loop Until There is Remaining Data Size
-        while (remainingDataSize > 0 && bytesWritten < sourceInfo.size()) {
+    // Init Source Info
+    QFileInfo sourceInfo(aSource);
 
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Clear Buffer
-            memset(&buffer, 0, sizeof(buffer));
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Calculate Bytes To Read
-            bufferBytesToRead = qMin(remainingDataSize, (qint64)sizeof(buffer));
-
-            do {
-                // Check Abort Flag
-                __CHECK_ABORTING;
-
-                // Read To Buffer From Source File
-                bufferBytesToWrite = sourceFile.read(buffer, bufferBytesToRead);
-
-                // Check Buffer Bytes To Write
-                if (bufferBytesToWrite != bufferBytesToRead) {
-                    // Send Error
-                    sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
-                }
-
-            } while (bufferBytesToWrite != bufferBytesToRead && response == DEFAULT_CONFIRM_RETRY);
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Check Bytes To Write
-            if (bufferBytesToWrite > 0) {
-
-                do {
-                    // Check Abort Flag
-                    __CHECK_ABORTING;
-
-                    // Write Buffer To Target File
-                    bufferBytesWritten = targetFile.write(buffer, bufferBytesToWrite);
-
-                    // Check Buffer Bytes Written
-                    if (bufferBytesWritten != bufferBytesToWrite) {
-                        // Send Error
-                        sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
-                    }
-
-                } while (bufferBytesWritten != bufferBytesToWrite && response == DEFAULT_CONFIRM_RETRY);
-
-            } else {
-                qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget << " - NO BYTES TO WRITE?!??";
-
-                break;
-            }
-
-            // Sleep a bit...
-            //QThread::currentThread()->usleep(1);
-
-            // Inc Bytes Writtem
-            bytesWritten += bufferBytesWritten;
-
-            // Dec Remaining Data Size
-            remainingDataSize -= bufferBytesWritten;
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            //qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - localSource: " << localSource << " - bytesWritten: " << bytesWritten << " - remainingDataSize: " << remainingDataSize;
-
-            // Send Progress
-            sendProgress(DEFAULT_OPERATION_COPY_FILE, localSource, bytesWritten, sourceInfo.size());
-        }
-
+    // Check Abort Flag
+    if (abortFlag) {
         // Close Target File
         targetFile.close();
         // Close Source File
         sourceFile.close();
-
-        // Check Abort Flag
-        __CHECK_ABORTING;
-
-        // Send Finished
-        sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
+        return;
     }
 
-    // ...
+    // Init Remaining Data Size
+    qint64 remainingDataSize = sourceInfo.size();
+    // Init Bytes Written
+    qint64 bytesWritten = 0;
+    // Init Buffer Bytes To Read
+    qint64 bufferBytesToRead = 0;
+    // Init Buffer Bytes To Write
+    qint64 bufferBytesToWrite = 0;
+    // Init Buffer Bytes Written
+    qint64 bufferBytesWritten = 0;
+
+    // Init Buffer
+    char buffer[DEFAULT_FILE_TRANSFER_BUFFER_SIZE];
+
+    // Loop Until There is Remaining Data Size
+    while (remainingDataSize > 0 && bytesWritten < sourceInfo.size()) {
+
+        // Check Abort Flag
+        if (abortFlag) {
+            // Close Target File
+            targetFile.close();
+            // Close Source File
+            sourceFile.close();
+            return;
+        }
+
+        // Clear Buffer
+        memset(&buffer, 0, sizeof(buffer));
+
+        // Check Abort Flag
+        if (abortFlag) {
+            // Close Target File
+            targetFile.close();
+            // Close Source File
+            sourceFile.close();
+            return;
+        }
+
+        // Calculate Bytes To Read
+        bufferBytesToRead = qMin(remainingDataSize, (qint64)sizeof(buffer));
+
+        do {
+            // Check Abort Flag
+            if (abortFlag) {
+                // Close Target File
+                targetFile.close();
+                // Close Source File
+                sourceFile.close();
+                return;
+            }
+
+            // Read To Buffer From Source File
+            bufferBytesToWrite = sourceFile.read(buffer, bufferBytesToRead);
+
+            // Check Buffer Bytes To Write
+            if (bufferBytesToWrite != bufferBytesToRead) {
+                // Send Error
+                sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSource, aTarget, DEFAULT_ERROR_GENERAL);
+            }
+
+        } while (bufferBytesToWrite != bufferBytesToRead && response == DEFAULT_CONFIRM_RETRY);
+
+        // Check Abort Flag
+        if (abortFlag) {
+            // Close Target File
+            targetFile.close();
+            // Close Source File
+            sourceFile.close();
+            return;
+        }
+
+        // Check Bytes To Write
+        if (bufferBytesToWrite > 0) {
+
+            do {
+                // Check Abort Flag
+                if (abortFlag) {
+                    // Close Target File
+                    targetFile.close();
+                    // Close Source File
+                    sourceFile.close();
+                    return;
+                }
+
+                // Write Buffer To Target File
+                bufferBytesWritten = targetFile.write(buffer, bufferBytesToWrite);
+
+                // Check Buffer Bytes Written
+                if (bufferBytesWritten != bufferBytesToWrite) {
+                    // Send Error
+                    sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSource, aTarget, DEFAULT_ERROR_GENERAL);
+                }
+
+            } while (bufferBytesWritten != bufferBytesToWrite && response == DEFAULT_CONFIRM_RETRY);
+
+        } else {
+            qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget << " - NO BYTES TO WRITE?!??";
+
+            break;
+        }
+
+        // Sleep a bit...
+        //QThread::currentThread()->usleep(1);
+
+        // Inc Bytes Writtem
+        bytesWritten += bufferBytesWritten;
+
+        // Dec Remaining Data Size
+        remainingDataSize -= bufferBytesWritten;
+
+        // Check Abort Flag
+        if (abortFlag) {
+            // Close Target File
+            targetFile.close();
+            // Close Source File
+            sourceFile.close();
+            return;
+        }
+
+        //qDebug() << "FileServerConnection::copyFile - cID: " << cID << " - aSource: " << aSource << " - bytesWritten: " << bytesWritten << " - remainingDataSize: " << remainingDataSize;
+
+        // Send Progress
+        sendProgress(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), aSource, bytesWritten, sourceInfo.size());
+    }
+
+    // Close Target File
+    targetFile.close();
+    // Close Source File
+    sourceFile.close();
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
 }
 
 //==============================================================================
@@ -1467,7 +1536,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
         // Check Success
         if (!success) {
             // Send Error
-            sendError(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
         }
 
     } while (!success && response == DEFAULT_CONFIRM_RETRY);
@@ -1475,7 +1544,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
     // Check Response
     if (response == DEFAULT_CONFIRM_ABORT) {
         // Send Aborted
-        sendAborted(DEFAULT_OPERATION_COPY_FILE, "", localSource, localTarget);
+        sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
 
         return;
     }
@@ -1507,7 +1576,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
         QString fileName = sourceEntryList[i];
 
         // Send File Operation Queue Item Found
-        sendFileOpQueueItemFound(DEFAULT_OPERATION_COPY_FILE, "", localSource + fileName, localTarget + fileName);
+        sendFileOpQueueItemFound(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource + fileName, localTarget + fileName);
     }
 
     // ...
@@ -1520,11 +1589,127 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
 //==============================================================================
 // Rename/Move File
 //==============================================================================
-void FileServerConnection::moveFile(const QString& aSource, const QString& aTarget)
+void FileServerConnection::move(const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::moveFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    //qDebug() << "FileServerConnection::move - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
-    // ...
+    // Init Local Source
+    QString localSource(aSource);
+    // Init Local Target
+    QString localTarget(aTarget);
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Source File Exists
+    if (!checkSourceFileExists(localSource, true)) {
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Source Info
+    QFileInfo sourceInfo(localSource);
+
+    // Check Source Info
+    if (sourceInfo.isDir() || sourceInfo.isBundle()) {
+
+        // Check If Files Are On The Same Drive
+        if (isOnSameDrive(localSource, localTarget)) {
+
+            // Rename File
+            renameFile(localSource, localTarget);
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Send Finished
+            sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
+
+        } else {
+            // Move Directory
+            moveDirectory(localSource, localTarget);
+        }
+
+    } else {
+        //qDebug() << "FileServerConnection::copy - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
+
+        // Check If Files Are On The Same Drive
+        if (isOnSameDrive(localSource, localTarget)) {
+
+            // Rename File
+            renameFile(localSource, localTarget);
+
+        } else {
+            // Copy File
+            copyFile(localSource, localTarget);
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
+            // Delete File
+            deleteFile(localSource);
+        }
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
+    }
+}
+
+//==============================================================================
+// Rename File
+//==============================================================================
+void FileServerConnection::renameFile(QString& aSource, QString& aTarget)
+{
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Target File Exists
+    if (checkTargetFileExist(aTarget, false)) {
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Dir
+    QDir dir(QDir::homePath());
+
+    // Init Success
+    bool success = false;
+
+    do  {
+
+        // Rename File
+        success = dir.rename(aSource, aTarget);
+
+        // Check Success
+        if (success) {
+            // Init Target Info
+            QFileInfo targetInfo(aTarget);
+
+            // Check Target Info
+            if (!targetInfo.isDir() && !targetInfo.isBundle() && !targetInfo.isSymLink()) {
+                // Send Progress
+                sendProgress(DEFAULT_OPERATION_MOVE_FILE, aSource, targetInfo.size(), targetInfo.size());
+            }
+
+        } else {
+
+            // Send Error
+            sendError(DEFAULT_OPERATION_MOVE_FILE, "", aSource, aTarget, DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!success && response == DEFAULT_CONFIRM_RETRY);
 }
 
 //==============================================================================
@@ -1532,9 +1717,94 @@ void FileServerConnection::moveFile(const QString& aSource, const QString& aTarg
 //==============================================================================
 void FileServerConnection::moveDirectory(const QString& aSourceDir, const QString& aTargetDir)
 {
+    // Init Local Source
+    QString localSource(aSourceDir);
+    // Init Local Target
+    QString localTarget(aTargetDir);
+
     qDebug() << "FileServerConnection::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
 
-    // ...
+    // Init Success
+    bool success = false;
+
+    // Init Target Dir
+    QDir targetDir(localTarget);
+
+    do {
+        // Make Path
+        success = targetDir.mkpath(localTarget);
+        // Check Success
+        if (!success) {
+            // Send Error
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+    // Check Response
+    if (response == DEFAULT_CONFIRM_ABORT) {
+        // Send Aborted
+        sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+
+        return;
+    }
+
+    // Init Source Dir
+    QDir sourceDir(localSource);
+
+    // Get Entry List
+    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+
+    // Get Entry List Count
+    int selCount = sourceEntryList.count();
+
+    // Check Source Dir Entry List Count
+    if (selCount > 0) {
+        // Check Local Source
+        if (!localSource.endsWith("/")) {
+            // Adjust Local Source
+            localSource += "/";
+        }
+
+        // Check Local Target
+        if (!localTarget.endsWith("/")) {
+            // Adjust Local Target
+            localTarget += "/";
+        }
+
+        // Go Thru Source Dir Entry List
+        for (int i=0; i<selCount; ++i) {
+            // Get File Name
+            QString fileName = sourceEntryList[i];
+
+            // Send File Operation Queue Item Found
+            sendFileOpQueueItemFound(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource + fileName, localTarget + fileName);
+        }
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_QUEUE, "", aSourceDir, aTargetDir);
+
+    } else {
+
+        // Init Temp Dir
+        QDir dir(sourceDir.absolutePath());
+
+        do  {
+
+            // Remove Dir
+            success = dir.rmdir(sourceDir.dirName());
+
+            // Check Success
+            if (!success) {
+                // Send Error
+                sendError(DEFAULT_OPERATION_MOVE_FILE, aSourceDir, aSourceDir, aTargetDir, DEFAULT_ERROR_GENERAL);
+            }
+
+        } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+        // Send Finished
+        sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", aSourceDir, aTargetDir);
+    }
 }
 
 //==============================================================================
@@ -2038,7 +2308,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
     // Check Global Options
     if (globalOptions & DEFAULT_CONFIRM_SKIPALL) {
         // Send Skipped
-        sendSkipped(DEFAULT_OPERATION_COPY_FILE, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
+        sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
         return fileExits;
     }
@@ -2046,7 +2316,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
     // Check Global Options
     if (globalOptions & DEFAULT_CONFIRM_NOALL) {
         // Send Skipped
-        sendSkipped(DEFAULT_OPERATION_COPY_FILE, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
+        sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
         return fileExits;
     }
@@ -2229,13 +2499,13 @@ bool FileServerConnection::openTargetFile(const QString& aSourcePath, const QStr
         // Check Target Opened
         if (!targetOpened) {
             // Send Error
-            sendError(DEFAULT_OPERATION_COPY_FILE, "", aSourcePath, aTargetPath, DEFAULT_ERROR_GENERAL);
+            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSourcePath, aTargetPath, DEFAULT_ERROR_GENERAL);
 
             // Check Response
             if (response == DEFAULT_CONFIRM_ABORT) {
 
                 // Send Aborted
-                sendAborted(DEFAULT_OPERATION_COPY_FILE, "", aSourcePath, aTargetPath);
+                sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSourcePath, aTargetPath);
 
                 return false;
             }

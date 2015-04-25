@@ -2,6 +2,8 @@
 #include <QProcess>
 #include <QThread>
 #include <QStringList>
+#include <QFile>
+#include <QStorageInfo>
 
 #include <cstdio>
 #include <stdio.h>
@@ -16,6 +18,46 @@
 
 // Global Mutex
 QMutex  globalMutex;
+
+
+//==============================================================================
+// Is On Same Drive
+//==============================================================================
+bool isOnSameDrive(const QString& aPathOne, const QString& aPathTwo)
+{
+#ifdef Q_OS_WIN
+
+    // Check The First Chars - Drive Letters
+    if (aPathOne[0] == aPathTwo[0]) {
+
+        return true;
+    }
+
+#else //  Q_OS_WIN
+
+    // Init File Info One
+    QFileInfo fileInfoOne(aPathOne);
+    // Init File Info Two
+    QFileInfo fileInfoTwo(aPathTwo);
+
+    // Init Storage Info
+    QStorageInfo storageOne(fileInfoOne.absolutePath());
+    // Init Storage Info
+    QStorageInfo storageTwo(fileInfoTwo.absolutePath());
+
+    qDebug() << "isOnSameDrive - volume1: " << storageOne.device() << " - volume2: " << storageTwo.device();
+
+    // Compare Storage Info
+    if (storageOne.device() == storageTwo.device()) {
+
+        return true;
+    }
+
+#endif // Q_OS_WIN
+
+    return false;
+}
+
 
 //==============================================================================
 // Get File Attribute
