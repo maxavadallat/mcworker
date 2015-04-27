@@ -1106,38 +1106,36 @@ void FileServerConnection::deleteDirectory(const QString& aDirPath)
         if (globalOptions & DEFAULT_CONFIRM_NOALL) {
             // Send Skipped
             sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
             return;
         }
 
         // Send Confirm
         sendfileOpNeedConfirm(DEFAULT_OPERATION_DELETE_FILE, DEFAULT_ERROR_NON_EMPTY, localPath, "", "");
 
-        // Check Response
-        if (response == DEFAULT_CONFIRM_ABORT) {
-            // Send Aborted
-            sendAborted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
+        // Switch Response
+        switch (response) {
+            case DEFAULT_CONFIRM_ABORT:
+                // Send Aborted
+                sendAborted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
             return;
-        }
 
-        // Check Response
-        if (response == DEFAULT_CONFIRM_NO) {
-            // Send Skipped
-            sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
+            case DEFAULT_CONFIRM_NOALL:
+                // Add To Global Options
+                globalOptions |= DEFAULT_CONFIRM_NOALL;
+            case DEFAULT_CONFIRM_NO:
+                // Send Skipped
+                sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
             return;
-        }
 
-        // Check Response
-        if (response == DEFAULT_CONFIRM_NOALL) {
-            // Add To Global Options
-            globalOptions |= DEFAULT_CONFIRM_NOALL;
+            case DEFAULT_CONFIRM_YESALL:
+                // Add To Global Options
+                globalOptions |= DEFAULT_CONFIRM_YESALL;
+            case DEFAULT_CONFIRM_YES:
+                // Just Fall Thru
+            break;
 
-            // Send Skipped
-            sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-
-            return;
+            default:
+            break;
         }
 
 
@@ -1553,7 +1551,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
     QDir sourceDir(localSource);
 
     // Get Entry List
-    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
 
     // Get Entry List Count
     int selCount = sourceEntryList.count();
@@ -1591,7 +1589,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
 //==============================================================================
 void FileServerConnection::move(const QString& aSource, const QString& aTarget)
 {
-    //qDebug() << "FileServerConnection::move - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    qDebug() << "FileServerConnection::move - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Init Local Source
     QString localSource(aSource);
@@ -1619,22 +1617,8 @@ void FileServerConnection::move(const QString& aSource, const QString& aTarget)
     // Check Source Info
     if (sourceInfo.isDir() || sourceInfo.isBundle()) {
 
-        // Check If Files Are On The Same Drive
-        if (isOnSameDrive(localSource, localTarget)) {
-
-            // Rename File
-            renameFile(localSource, localTarget);
-
-            // Check Abort Flag
-            __CHECK_ABORTING;
-
-            // Send Finished
-            sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
-
-        } else {
-            // Move Directory
-            moveDirectory(localSource, localTarget);
-        }
+        // Move Directory
+        moveDirectory(localSource, localTarget);
 
     } else {
         //qDebug() << "FileServerConnection::copy - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
@@ -1724,36 +1708,156 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
 
     qDebug() << "FileServerConnection::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
 
-    // Init Success
-    bool success = false;
+    // ---------------------
 
-    // Init Target Dir
-    QDir targetDir(localTarget);
+    // Check If Target Dir Exists & Empty & Source IS Empty
+    if (QFile::exists(localTarget) && isDirEmpty(localTarget) && !isDirEmpty(localSource)) {
+        // Init Success
+        bool success = false;
+        // Init Dir
+        QDir dir(QDir::homePath());
 
-    do {
-        // Make Path
-        success = targetDir.mkpath(localTarget);
-        // Check Success
-        if (!success) {
-            // Send Error
-            sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+        do  {
+            // Check Abort Flag
+            __CHECK_ABORTING;
+            // Remove Target Dir
+            success = dir.rmdir(localTarget);
+            // Check Success
+            if (!success) {
+                // Send Error
+                sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_CANNOT_DELETE_TARGET_DIR);
+            }
+        } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+            // Send Aborted
+            sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+            return;
+        }
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // ---------------------
+
+    // Check If Source Dir Exists & Target Dir Doesn't Exists & On Same Drive
+    if (QFile::exists(localSource) && !QFile::exists(localTarget) && isOnSameDrive(localSource, localTarget)) {
+        // Init Success
+        bool success = false;
+        // Init Dir
+        QDir dir(QDir::homePath());
+
+        do  {
+            // Check Abort Flag
+            __CHECK_ABORTING;
+            // Rename Source Dir
+            success = dir.rename(localSource, localTarget);
+            // Check Success
+            if (!success) {
+                // Send Error
+                sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+            }
+        } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+            // Send Aborted
+            sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+            return;
         }
 
-    } while (!success && response == DEFAULT_CONFIRM_RETRY);
-
-    // Check Response
-    if (response == DEFAULT_CONFIRM_ABORT) {
-        // Send Aborted
-        sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+        // Send Finished
+        sendFinished(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
 
         return;
     }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // ---------------------
+
+    // Check If Target Dir Exists
+    if (!QFile::exists(localTarget)) {
+        // Init Success
+        bool success = false;
+
+        // Init Target Dir
+        QDir targetDir(localTarget);
+
+        do {
+            // Check Abort Flag
+            __CHECK_ABORTING;
+            // Make Path
+            success = targetDir.mkpath(localTarget);
+            // Check Success
+            if (!success) {
+                // Send Error
+                sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+            }
+        } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+            // Send Aborted
+            sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+            return;
+        }
+    } else {
+
+        // Check Global Options
+        if (globalOptions & DEFAULT_CONFIRM_NOALL) {
+            // Send Skipped
+            sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+            return;
+        }
+
+        // Check If Target Dir Empty & Global Options
+        if (!isDirEmpty(localTarget) && !(globalOptions & DEFAULT_CONFIRM_YESALL)) {
+
+            // Send Need Confirm
+            sendfileOpNeedConfirm(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), DEFAULT_ERROR_TARGET_DIR_EXISTS, "", localSource, localTarget);
+
+            // Switch Response
+            switch (response) {
+                case DEFAULT_CONFIRM_ABORT:
+                    // Send Aborted
+                    sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+                return;
+
+                case DEFAULT_CONFIRM_NOALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_NOALL;
+                case DEFAULT_CONFIRM_NO:
+                    // Send Skipped
+                    sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+                return;
+
+                case DEFAULT_CONFIRM_YESALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_YESALL;
+                case DEFAULT_CONFIRM_YES:
+                    // Just Fall Thru
+                break;
+
+                default:
+                break;
+            }
+        }
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // ---------------------
 
     // Init Source Dir
     QDir sourceDir(localSource);
 
     // Get Entry List
-    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
 
     // Get Entry List Count
     int selCount = sourceEntryList.count();
@@ -1774,9 +1878,12 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
 
         // Go Thru Source Dir Entry List
         for (int i=0; i<selCount; ++i) {
+
+            // Check Abort Flag
+            __CHECK_ABORTING;
+
             // Get File Name
             QString fileName = sourceEntryList[i];
-
             // Send File Operation Queue Item Found
             sendFileOpQueueItemFound(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource + fileName, localTarget + fileName);
         }
@@ -1787,19 +1894,20 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
     } else {
 
         // Init Temp Dir
-        QDir dir(sourceDir.absolutePath());
+        QDir dir(QDir::homePath());
+        // Init Success
+        bool success = false;
 
         do  {
-
+            // Check Abort Flag
+            __CHECK_ABORTING;
             // Remove Dir
-            success = dir.rmdir(sourceDir.dirName());
-
+            success = dir.rmdir(localSource);
             // Check Success
             if (!success) {
                 // Send Error
                 sendError(DEFAULT_OPERATION_MOVE_FILE, aSourceDir, aSourceDir, aTargetDir, DEFAULT_ERROR_GENERAL);
             }
-
         } while (!success && response == DEFAULT_CONFIRM_RETRY);
 
         // Send Finished

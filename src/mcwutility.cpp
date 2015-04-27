@@ -202,7 +202,13 @@ bool isDir(const QString& aDirPath)
 //==============================================================================
 bool isDirEmpty(const QString& aDirPath)
 {
-    return getDirFileInfoList(aDirPath).count() == 2;
+    // Init Dir
+    QDir dir(aDirPath);
+
+    // Get Dir Entry List Count
+    int elCount = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot).count();
+
+    return elCount == 0;
 }
 
 //==============================================================================
