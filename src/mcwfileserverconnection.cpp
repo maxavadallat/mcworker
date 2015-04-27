@@ -2414,15 +2414,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
     }
 
     // Check Global Options
-    if (globalOptions & DEFAULT_CONFIRM_SKIPALL) {
-        // Send Skipped
-        sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
-
-        return fileExits;
-    }
-
-    // Check Global Options
-    if (globalOptions & DEFAULT_CONFIRM_NOALL) {
+    if (globalOptions & DEFAULT_CONFIRM_SKIPALL || globalOptions & DEFAULT_CONFIRM_NOALL) {
         // Send Skipped
         sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
@@ -2510,20 +2502,17 @@ bool FileServerConnection::deleteTargetFile(const QString& aFilePath)
 {
     // Init Success
     bool success = false;
-
     // Init Dir
     QDir dir(QDir::homePath());
 
     do {
         // Remove File
         success = dir.remove(aFilePath);
-
         // Check Success
         if (!success) {
             // Send Error
             sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aFilePath, DEFAULT_ERROR_GENERAL);
         }
-
     } while (!success && response == DEFAULT_CONFIRM_RETRY);
 
     return success;
