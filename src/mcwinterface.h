@@ -103,6 +103,8 @@
 #define DEFAULT_RESPONSE_READY                  "RDY"
 #define DEFAULT_RESPONSE_ABORT                  "ABRT"
 #define DEFAULT_RESPONSE_ERROR                  "ERR"
+#define DEFAULT_RESPONSE_ADMIN                  "ADM"
+
 
 #define DEFAULT_RESPONSE_TEST                   "TEST"
 

@@ -417,7 +417,9 @@ void FileServerConnection::socketDisconnected()
 //==============================================================================
 void FileServerConnection::socketError(QAbstractSocket::SocketError socketError)
 {
+    qWarning() << " ";
     qWarning() << "FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError << " - error: " << clientSocket->errorString();
+    qWarning() << " ";
 
     // ...
 }
@@ -1661,6 +1663,8 @@ void FileServerConnection::renameFile(QString& aSource, QString& aTarget)
 
         return;
     }
+
+    qDebug() << "FileServerConnection::renameFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Check Abort Flag
     __CHECK_ABORTING;
