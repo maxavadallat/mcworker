@@ -585,8 +585,7 @@ quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& a
 
     // Check If Is Dir
     if (dirInfo.isDir() || dirInfo.isBundle()) {
-
-        qDebug() << "scanDirSize - aDirPath: " << aDirPath;
+        //qDebug() << "scanDirectorySize - aDirPath: " << aDirPath;
 
         __SDS_CHECK_ABORT;
 
@@ -616,14 +615,14 @@ quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& a
 
             // Check If Is Dir
             if ((fileInfo.isDir() || fileInfo.isBundle()) && !fileInfo.isSymLink()) {
-                //qDebug() << "scanDirSize - dirName: " << fileInfo.fileName();
+                //qDebug() << "scanDirectorySize - dirName: " << fileInfo.fileName();
                 // Inc Num Dirs
                 aNumDirs++;
                 // Add Dir Size To REsult
                 result += scanDirectorySize(fileInfo.absoluteFilePath(), aNumDirs, aNumFiles, aAbort, aCallback, aContext);
 
             } else {
-                //qDebug() << "scanDirSize - fileName: " << fileInfo.fileName() << " - size: " << fileInfo.size();
+                //qDebug() << "scanDirectorySize - fileName: " << fileInfo.fileName() << " - size: " << fileInfo.size();
                 // Inc Num Files
                 aNumFiles++;
                 // Add File Size To REsult

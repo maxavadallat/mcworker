@@ -28,9 +28,6 @@ FileServerConnectionWorker::FileServerConnectionWorker(FileServerConnection* aCo
     // Move to Thread
     moveToThread(workerThread);
 
-    // Set Priority
-    //workerThread->setPriority(QThread::NormalPriority);
-
     // Set Status
     setStatus(EFSCWSIdle);
 
@@ -204,7 +201,7 @@ void FileServerConnectionWorker::abort()
 void FileServerConnectionWorker::doOperation()
 {
     // Set Thread Priority
-    workerThread->setPriority(QThread::LowPriority);
+    workerThread->setPriority(QThread::IdlePriority);
 
     qDebug() << "--------------------------------------------------------------------------------";
     qDebug() << "FileServerConnectionWorker::doOperation - STARTED!";
@@ -253,8 +250,16 @@ void FileServerConnectionWorker::doOperation()
         if (fsConnection->isQueueEmpty())
         {
             //qDebug() << "FileServerConnectionWorker::doOperation >>>> SLEEP";
+            //qDebug() << "--------------------------------------------------------------------------------";
+            //qDebug() << "FileServerConnectionWorker::doOperation - WAIT!";
+            //qDebug() << "--------------------------------------------------------------------------------";
+
             // Wait
             waitCondition.wait(&mutex);
+
+            //qDebug() << "--------------------------------------------------------------------------------";
+            //qDebug() << "FileServerConnectionWorker::doOperation - RESUME!";
+            //qDebug() << "--------------------------------------------------------------------------------";
         }
 
         __CHECK_ABORTING;
@@ -276,9 +281,6 @@ void FileServerConnectionWorker::doOperation()
         // Wait For Teminate
         //workerThread->wait();
     }
-
-    // Set Status
-    //setStatus(EFSCWSExiting);
 }
 
 //==============================================================================
