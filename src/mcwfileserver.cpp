@@ -78,7 +78,9 @@ void FileServer::stopServer()
 //==============================================================================
 void FileServer::newClientConnection()
 {
-    qDebug() << "FileServer::newClientConnection";
+    qDebug() << " ";
+    qDebug() << ">>>> FileServer::newClientConnection";
+    qDebug() << " ";
 
     // Create New File Server Connection
     FileServerConnection* newServerConnection = new FileServerConnection(QDateTime::currentDateTime().toMSecsSinceEpoch(), server.nextPendingConnection());
@@ -88,10 +90,14 @@ void FileServer::newClientConnection()
 
     // Connect Signals
     connect(newServerConnection, SIGNAL(activity(uint)), this, SLOT(clientActivity(uint)));
-    connect(newServerConnection, SIGNAL(closed(uint)), this, SLOT(clientClosed(uint)));
+    connect(newServerConnection, SIGNAL(disconnected(uint)), this, SLOT(clientDisconnected(uint)));
 
     // Add To Clients
     clientList << newServerConnection;
+
+    qDebug() << " ";
+    qDebug() << "<<<< FileServer::newClientConnection";
+    qDebug() << " ";
 }
 
 //==============================================================================
@@ -99,7 +105,7 @@ void FileServer::newClientConnection()
 //==============================================================================
 void FileServer::acceptError(QAbstractSocket::SocketError socketError)
 {
-    qDebug() << "FileServer::newClientConnection - socketError: " << socketError;
+    qDebug() << "FileServer::acceptError - socketError: " << socketError;
 
     // ...
 }
@@ -118,9 +124,9 @@ void FileServer::clientActivity(const unsigned int& aID)
 }
 
 //==============================================================================
-// Client Closed Slot
+// Client Disconnected Slot
 //==============================================================================
-void FileServer::clientClosed(const unsigned int& aID)
+void FileServer::clientDisconnected(const unsigned int& aID)
 {
     // Get Clients Count
     int cCount = clientList.count();
@@ -132,18 +138,20 @@ void FileServer::clientClosed(const unsigned int& aID)
 
         // Check Client ID
         if (client->cID == aID) {
-            qDebug() << "FileServer::clientClosed - aID: " << aID;
+            qDebug() << "FileServer::clientDisconnected - aID: " << aID;
 
             // Remove Client
             clientList.removeAt(i);
 
             // Delete Client
-            delete client;
-            client = NULL;
+            //delete client;
+            //client = NULL;
 
             // Check Client List
             if (clientList.count() <= 0) {
-                qDebug() << "FileServer::clientClosed - aID: " << aID << " - No More Clients Exiting... ";
+                qDebug() << " ";
+                qDebug() << "FileServer::clientDisconnected - No More Clients Exiting... ";
+                qDebug() << " ";
 
                 // Exit App
                 QCoreApplication::exit();

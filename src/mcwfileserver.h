@@ -53,7 +53,7 @@ protected slots:
     void clientActivity(const unsigned int& aID);
 
     // Client Closed Slot
-    void clientClosed(const unsigned int& aID);
+    void clientDisconnected(const unsigned int& aID);
 
     // Quit Received Slot
     void clientQuitReceived(const unsigned int& aID);

@@ -55,8 +55,8 @@ signals:
 
     // Activity
     void activity(const unsigned int& aID);
-    // Closed Signal
-    void closed(const unsigned int& aID);
+    // Disconnected Signal
+    void disconnected(const unsigned int& aID);
     // Quit Received
     void quitReceived(const unsigned int& aID);
 

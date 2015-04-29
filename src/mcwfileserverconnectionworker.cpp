@@ -188,10 +188,6 @@ void FileServerConnectionWorker::abort()
     if (workerThread) {
         // Wake One Condition
         waitCondition.wakeOne();
-        // Terminate
-        //workerThread->terminate();
-        // Wait
-        //workerThread->wait();
     }
 }
 
@@ -231,8 +227,14 @@ void FileServerConnectionWorker::doOperation()
 
         __CHECK_ABORTING;
 
+        // Lock Mutext
+        //mutex.lock();
+
         // Process Operation Queue
         emptyQeueue = fsConnection->processOperationQueue();
+
+        // Unlock Mutex
+        //mutex.unlock();
 
         __CHECK_ABORTING;
 
@@ -317,8 +319,14 @@ void FileServerConnectionWorker::workerThreadFinished()
     // Move Back To Application Main Thread
     moveToThread(QApplication::instance()->thread());
 
-    // Set Status
-    setStatus(EFSCWSAborted);
+    // Check Status
+    if (status == EFSCWSAborting) {
+        // Set Status
+        setStatus(EFSCWSAborted);
+    } else {
+        // Set Status
+        setStatus(EFSCWSFinished);
+    }
 
     // Emit Worker Thread Finished Signal
     emit threadFinished();
@@ -375,6 +383,6 @@ FileServerConnectionWorker::~FileServerConnectionWorker()
 
     // ...
 
-    qDebug() << "FileServerConnectionWorker::~FileServerConnectionWorker";
+    //qDebug() << "FileServerConnectionWorker::~FileServerConnectionWorker";
 }
 

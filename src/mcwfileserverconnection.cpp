@@ -139,21 +139,22 @@ void FileServerConnection::abort(const bool& aAbortSocket)
 {
     // Check Abort Flag
     if (!abortFlag) {
-        qDebug() << "FileServerConnection::abort - cID: " << cID;
-
         // Set Abort Flag
         abortFlag = true;
 
         // Check Worker
         if (worker) {
+            // Check Worker Status
+            if (worker->status != EFSCWSFinished) {
+                qDebug() << "FileServerConnection::abort - cID: " << cID;
+            }
+
             // Abort
             worker->abort();
-            // Reset Worker
-            //worker = NULL;
         }
 
         // Check Client
-        if (clientSocket && aAbortSocket) {
+        if (clientSocket && clientSocket->state() == QAbstractSocket::ConnectedState && aAbortSocket) {
             // Abort
             clientSocket->abort();
         }
@@ -167,32 +168,16 @@ void FileServerConnection::close()
 {
     // Check Client ID
     if (cID > 0) {
-
         qDebug() << "FileServerConnection::close - cID: " << cID;
 
-        try {
-
-            // Check Local Socket
-            if (clientSocket && clientSocket->isValid()) {
-                // Abort
-                clientSocket->abort();
-                // Disconnect From Server -> Delete Later
-                clientSocket->disconnectFromHost();
-                // Reset Client Socket
-                clientSocket = NULL;
-
-                // ...
-            }
-
-            // Emit Closed Signal
-            emit closed(cID);
-
-        } catch (...) {
-            qDebug() << "FileServerConnection::close - cID: " << cID << " - Local Client Deleteing EXCEPTION!";
+        // Check Local Socket
+        if (clientSocket && clientSocket->isOpen()) {
+            // Close
+            clientSocket->close();
         }
 
         // Reset Client ID
-        cID = (unsigned int)-1;
+        //cID = 0;
     }
 }
 
@@ -203,16 +188,39 @@ void FileServerConnection::shutDown()
 {
     qDebug() << "FileServerConnection::shutDown - cID: " << cID;
 
+    // Check Client Socket
+    if (clientSocket) {
+
+        // Disconnect Signals
+        disconnect(clientSocket, SIGNAL(connected()), this, SLOT(socketConnected()));
+        disconnect(clientSocket, SIGNAL(disconnected()), this, SLOT(socketDisconnected()));
+        disconnect(clientSocket, SIGNAL(aboutToClose()), this, SLOT(socketAboutToClose()));
+        disconnect(clientSocket, SIGNAL(bytesWritten(qint64)), this, SLOT(socketBytesWritten(qint64)));
+        disconnect(clientSocket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(socketError(QAbstractSocket::SocketError)));
+        disconnect(clientSocket, SIGNAL(readChannelFinished()), this, SLOT(socketReadChannelFinished()));
+        disconnect(clientSocket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
+        disconnect(clientSocket, SIGNAL(stateChanged(QAbstractSocket::SocketState)), this, SLOT(socketStateChanged(QAbstractSocket::SocketState)));
+
+        // Check If Open
+        if (clientSocket->isOpen()) {
+            // Close Client Socket
+            clientSocket->close();
+        }
+    }
+
     // Abort
     abort(true);
 
-    // Check Client
-    if (clientSocket) {
-        // Disconnect From Host
-        clientSocket->disconnectFromHost();
-        // Close Client
-        clientSocket->close();
+    // Check Worker
+    if (worker) {
+        // Disconnect Signals
+        disconnect(worker, SIGNAL(operationStatusChanged(int)), this, SLOT(workerOperationStatusChanged(int)));
+        disconnect(worker, SIGNAL(writeData(QVariantMap)), this, SLOT(writeData(QVariantMap)));
+        disconnect(worker, SIGNAL(threadStarted()), this, SLOT(workerThreadStarted()));
+        disconnect(worker, SIGNAL(threadFinished()), this, SLOT(workerThreadFinished()));
     }
+
+    // ...
 }
 
 //==============================================================================
@@ -409,7 +417,10 @@ void FileServerConnection::socketDisconnected()
     qDebug() << "FileServerConnection::socketDisconnected - cID: " << cID;
 
     // Emit Closed Signal
-    emit closed(cID);
+    emit disconnected(cID);
+
+    // Delete Later
+    deleteLater();
 }
 
 //==============================================================================
@@ -417,9 +428,9 @@ void FileServerConnection::socketDisconnected()
 //==============================================================================
 void FileServerConnection::socketError(QAbstractSocket::SocketError socketError)
 {
-    qWarning() << " ";
-    qWarning() << "FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError << " - error: " << clientSocket->errorString();
-    qWarning() << " ";
+    qDebug() << " ";
+    qDebug() << "#### FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError;
+    qDebug() << " ";
 
     // ...
 }
@@ -564,7 +575,7 @@ void FileServerConnection::processLastBuffer()
         break;
 
         default:
-            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - REQUEST!";
+            //qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - REQUEST!";
             // Process Request
             processRequest(newVariantMap);
         break;
@@ -736,7 +747,7 @@ void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
     // Switch Status
     switch (aStatus) {
         case EFSCWSIdle:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - IDLE";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - IDLE";
 
             // ...
 
@@ -749,35 +760,35 @@ void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
         break;
 
         case EFSCWSFinished:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - FINISHED!";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - FINISHED!";
 
             // Reset Abort Flag
             abortFlag = false;
         break;
 
         case EFSCWSCancelling:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - CANCELLING!";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - CANCELLING!";
 
             // ...
 
         break;
 
         case EFSCWSAborting:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTING!";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTING!";
 
             // ...
 
         break;
 
         case EFSCWSAborted:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTED!";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ABORTED!";
 
             // ...
 
         break;
 
         case EFSCWSError:
-            qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ERROR!";
+            //qDebug() << "FileServerConnection::workerOperationStatusChanged - cID: " << cID << " - operation: " << operation << " - ERROR!";
 
             // ...
 
@@ -796,7 +807,7 @@ void FileServerConnection::workerOperationStatusChanged(const int& aStatus)
 //==============================================================================
 void FileServerConnection::workerThreadStarted()
 {
-    qDebug() << "FileServerConnection::workerThreadStarted - cID: " << cID;
+    //qDebug() << "FileServerConnection::workerThreadStarted - cID: " << cID;
 
     // ...
 }
@@ -1976,7 +1987,7 @@ void FileServerConnection::testRun()
 
         } else {
 
-            //qDebug() << "FileServerConnection::testRun - cID: " << cID << " - CountDown: " << counter;
+            qDebug() << "FileServerConnection::testRun - cID: " << cID << " - CountDown: " << counter;
 
             // Emit Activity Signal
             emit activity(cID);
@@ -1995,11 +2006,8 @@ void FileServerConnection::testRun()
             // Write Data With Signal
             writeDataWithSignal(newDataMap);
 
-            // Write Data
-            //writeData(newDataMap);
-
             // Sleep
-            QThread::currentThread()->usleep(1);
+            QThread::currentThread()->sleep(1);
 
             // Dec Counter
             counter--;
@@ -2015,7 +2023,7 @@ void FileServerConnection::sendStarted(const QString& aOp,
                                        const QString& aSource,
                                        const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendStarted - aOp: " << aOp;
+    //qDebug() << "FileServerConnection::sendStarted - aOp: " << aOp;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -2072,7 +2080,7 @@ void FileServerConnection::sendSkipped(const QString& aOp,
                                        const QString& aSource,
                                        const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendSkipped - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    //qDebug() << "FileServerConnection::sendSkipped - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -2102,7 +2110,7 @@ void FileServerConnection::sendSkipped(const QString& aOp,
 //==============================================================================
 void FileServerConnection::sendFinished(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    //qDebug() << "FileServerConnection::sendFinished - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -2132,7 +2140,7 @@ void FileServerConnection::sendFinished(const QString& aOp, const QString& aPath
 //==============================================================================
 void FileServerConnection::sendAborted(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendAborted - aOp: " << aOp;
+    //qDebug() << "FileServerConnection::sendAborted - aOp: " << aOp;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -2189,7 +2197,7 @@ int FileServerConnection::sendError(const QString& aOp, const QString& aPath, co
 //==============================================================================
 void FileServerConnection::sendfileOpNeedConfirm(const QString& aOp, const int& aCode, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnection::sendfileOpNeedConfirm - aOp: " << aOp << " - aSource: " << aSource << " - aTarget: " << aTarget << " - aCode: " << aCode;
+    //qDebug() << "FileServerConnection::sendfileOpNeedConfirm - aOp: " << aOp << " - aSource: " << aSource << " - aTarget: " << aTarget << " - aCode: " << aCode;
 
     // Init New Data Map
     QVariantMap newDataMap;
@@ -2691,26 +2699,24 @@ FileServerConnection::~FileServerConnection()
 
     // Check Worker
     if (worker) {
-        // Disconnect Signals
-        disconnect(worker, SIGNAL(threadStarted()), this, SLOT(workerThreadStarted()));
-        disconnect(worker, SIGNAL(threadFinished()), this, SLOT(workerThreadFinished()));
-
         // Delete Worker Later
         worker->deleteLater();
+        // Reset Worker
         worker = NULL;
     }
 
-    // Check Client
+    // Check Client Socket
     if (clientSocket) {
-        // Delete Socket
+        // Delete Client Socket
         delete clientSocket;
+        // Reset Client Socket
         clientSocket = NULL;
     }
 
     // Clear Pending Operations
     pendingOperations.clear();
 
-    qDebug() << "FileServerConnection::~FileServerConnection - cID: " << cID;
+    //qDebug() << "FileServerConnection::~FileServerConnection - cID: " << cID;
 }
 
 
