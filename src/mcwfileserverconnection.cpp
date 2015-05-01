@@ -428,9 +428,9 @@ void FileServerConnection::socketDisconnected()
 //==============================================================================
 void FileServerConnection::socketError(QAbstractSocket::SocketError socketError)
 {
-    qDebug() << " ";
-    qDebug() << "#### FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError;
-    qDebug() << " ";
+    //qDebug() << " ";
+    qDebug() << "FileServerConnection::socketError - cID: " << cID << " - socketError: " << socketError;
+    //qDebug() << " ";
 
     // ...
 }

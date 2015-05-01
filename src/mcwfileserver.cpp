@@ -78,9 +78,9 @@ void FileServer::stopServer()
 //==============================================================================
 void FileServer::newClientConnection()
 {
-    qDebug() << " ";
-    qDebug() << ">>>> FileServer::newClientConnection";
-    qDebug() << " ";
+//    qDebug() << " ";
+//    qDebug() << ">>>> FileServer::newClientConnection";
+//    qDebug() << " ";
 
     // Create New File Server Connection
     FileServerConnection* newServerConnection = new FileServerConnection(QDateTime::currentDateTime().toMSecsSinceEpoch(), server.nextPendingConnection());
@@ -95,9 +95,9 @@ void FileServer::newClientConnection()
     // Add To Clients
     clientList << newServerConnection;
 
-    qDebug() << " ";
-    qDebug() << "<<<< FileServer::newClientConnection";
-    qDebug() << " ";
+//    qDebug() << " ";
+//    qDebug() << "<<<< FileServer::newClientConnection";
+//    qDebug() << " ";
 }
 
 //==============================================================================
@@ -149,9 +149,9 @@ void FileServer::clientDisconnected(const unsigned int& aID)
 
             // Check Client List
             if (clientList.count() <= 0) {
-                qDebug() << " ";
+                //qDebug() << " ";
                 qDebug() << "FileServer::clientDisconnected - No More Clients Exiting... ";
-                qDebug() << " ";
+                //qDebug() << " ";
 
                 // Exit App
                 QCoreApplication::exit();
