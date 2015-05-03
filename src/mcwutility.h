@@ -130,8 +130,24 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
 typedef void (*dirSizeScanProgressCallback)(const QString&, const quint64&, const quint64&, const quint64&, void*);
 
 // Scan Dir Size
-quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& aNumFiles, const bool& aAbort, dirSizeScanProgressCallback aCallback = NULL, void* aContext = NULL);
+quint64 scanDirectorySize(const QString& aDirPath,
+                          quint64& aNumDirs,
+                          quint64& aNumFiles,
+                          const bool& aAbort,
+                          dirSizeScanProgressCallback aCallback = NULL,
+                          void* aContext = NULL);
 
+// Dir File Search Item Found Callback Type
+typedef void (*fileSearchItemFoundCallback)(const QString&, const QString&, void*);
+
+// Search Directory
+void searchDirectory(const QString& aDirPath,
+                     const QString& aFilePattern,
+                     const QString& aContentPattern,
+                     const int& aOptions,
+                     const bool& aAbort,
+                     fileSearchItemFoundCallback aCallback = NULL,
+                     void* aContext = NULL);
 
 #endif // UTILITY
 

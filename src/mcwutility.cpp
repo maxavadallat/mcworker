@@ -3,15 +3,10 @@
 #include <QThread>
 #include <QStringList>
 #include <QFile>
+#include <QTextStream>
 #include <QStorageInfo>
-
-#include <cstdio>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <unistd.h>
-#include <string>
-#include <sstream>
+#include <QMimeDatabase>
+#include <QMimeType>
 
 #include "mcwconstants.h"
 #include "mcwutility.h"
@@ -644,6 +639,200 @@ quint64 scanDirectorySize(const QString& aDirPath, quint64& aNumDirs, quint64& a
     return result;
 }
 
+#define __SD_CHECK_ABORT   if (aAbort) return
+
+//==============================================================================
+// Is Mime Type Supported By File Content Search
+//==============================================================================
+bool isMimeSupportedByContentSearch(const QString& aMimeType)
+{
+    // Check Mime Type
+    if (aMimeType.startsWith(DEFAULT_MIME_PREFIX_TEXT)) {
+        return true;
+    }
+
+    // Check Mime Type
+    if (aMimeType.contains(DEFAULT_MIME_TEXT)) {
+        return true;
+    }
+
+    // Check Mime Type
+    if (aMimeType.contains(DEFAULT_MIME_XML)) {
+        return true;
+    }
+
+    // Check Mime Type
+    if (aMimeType.contains(DEFAULT_MIME_SHELLSCRIPT)) {
+        return true;
+    }
+
+    // Check Mime Type
+    if (aMimeType.contains(DEFAULT_MIME_JAVASCRIPT)) {
+        return true;
+    }
+
+    return false;
+}
+
+//==============================================================================
+// Is White Space
+//==============================================================================
+bool isWhiteSpace(const QChar& aChar)
+{
+    return aChar.isSpace();
+}
+
+//==============================================================================
+// Check Whole Word
+//==============================================================================
+bool checkPatternSurroundings(const QString& aContent, const QString& aPattern, const int& aIndex)
+{
+    // Check Index
+    if (aIndex < 0) {
+        return false;
+    }
+
+    // Get Pattern Length
+    int pLength = aPattern.length();
+    // Get content Length
+    int cLength = aContent.length();
+
+    // Get Prepending Char
+    QChar preChar = aContent[aIndex - 1];
+
+    // Get Trailing Char
+    QChar trailChar = aContent[aIndex + pLength];
+
+    // Check Index
+    if (((aIndex == 0) || isWhiteSpace(preChar)) && (isWhiteSpace(trailChar) || (aIndex + pLength >= cLength))) {
+        return true;
+    }
+
+    return false;
+}
+
+//==============================================================================
+// Search Directory
+//==============================================================================
+void searchDirectory(const QString& aDirPath,
+                     const QString& aFilePattern,
+                     const QString& aContentPattern,
+                     const int& aOptions,
+                     const bool& aAbort,
+                     fileSearchItemFoundCallback aCallback,
+                     void* aContext)
+{
+    // Init Mime Database
+    QMimeDatabase mimeDatabase;
+
+    // Init Dir Info
+    QFileInfo dirInfo(aDirPath);
+
+    __SD_CHECK_ABORT;
+
+    // Check If Is Dir
+    if (dirInfo.isDir() || dirInfo.isBundle()) {
+
+        // Init dir
+        QDir dir(aDirPath);
+
+        __SD_CHECK_ABORT;
+
+        // Get File Info List
+        QFileInfoList fiList = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+
+        // Get File Info List Count
+        int filCount = fiList.count();
+
+        __SD_CHECK_ABORT;
+
+        // Go Thru File Info List
+        for (int i=0; i<filCount; ++i) {
+
+            __SD_CHECK_ABORT;
+
+            // Get File Info
+            QFileInfo fileInfo = fiList[i];
+
+            __SD_CHECK_ABORT;
+
+            // Check If Is Dir
+            if ((fileInfo.isDir() || fileInfo.isBundle()) && !fileInfo.isSymLink()) {
+
+                // Check If Pattern Matches - Simple File Search
+                if (dir.match(aFilePattern, fileInfo.fileName()) && aContentPattern.isEmpty()) {
+                    // Check Callback
+                    if (aCallback) {
+                        // Callback
+                        aCallback(aDirPath, fileInfo.absoluteFilePath(), aContext);
+                    }
+                }
+
+                __SD_CHECK_ABORT;
+
+                // Search Directory
+                searchDirectory(fileInfo.absoluteFilePath(), aFilePattern, aContentPattern, aOptions, aAbort, aCallback, aContext);
+
+            } else {
+                // Check If Pattern Matches
+                if (dir.match(aFilePattern, fileInfo.fileName())) {
+                    // Check Content Pattern
+                    if (!aContentPattern.isEmpty()) {
+                        // Get Mime
+                        QString mime = mimeDatabase.mimeTypeForFile(fileInfo.absoluteFilePath()).name();
+                        // Chek Mime
+                        if (isMimeSupportedByContentSearch(mime)) {
+                            // Init File
+                            QFile currFile(fileInfo.absoluteFilePath());
+                            // Open File
+                            if (currFile.open(QIODevice::ReadOnly)) {
+                                // Init Text Stream
+                                QTextStream textStream(&currFile);
+                                // Read All
+                                QString content = textStream.readAll();
+                                // Get Patttern Index
+                                int pIndex = content.indexOf(aContentPattern, 0, (aOptions & DEFAULT_SEARCH_OPTION_CASE_SENSITIVE) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+                                // Search Content
+                                if (pIndex >= 0) {
+                                    // Check Options For Whole Word
+                                    if (aOptions & DEFAULT_SEARCH_OPTION_WHOLE_WORD) {
+                                        // Check Surroundings Of Pattern For White Space
+                                        if (checkPatternSurroundings(content, aContentPattern, pIndex)) {
+                                            // Check Callback
+                                            if (aCallback) {
+                                                // Callback
+                                                aCallback(aDirPath, fileInfo.absoluteFilePath(), aContext);
+                                            }
+                                        }
+                                    } else {
+                                        // Check Callback
+                                        if (aCallback) {
+                                            // Callback
+                                            aCallback(aDirPath, fileInfo.absoluteFilePath(), aContext);
+                                        }
+                                    }
+                                }
+
+                                // Close File
+                                currFile.close();
+                            }
+                        }
+                    } else {
+                        // Check Callback
+                        if (aCallback) {
+                            // Callback
+                            aCallback(aDirPath, fileInfo.absoluteFilePath(), aContext);
+                        }
+                    }
+                }
+            }
+
+            __SD_CHECK_ABORT;
+        }
+    }
+
+    __SD_CHECK_ABORT;
+}
 
 
 

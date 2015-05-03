@@ -34,6 +34,17 @@
 
 #endif // Q_OS_WIN
 
+#define DEFAULT_MIME_PREFIX_TEXT                                    "text/"
+#define DEFAULT_MIME_PREFIX_IMAGE                                   "image/"
+#define DEFAULT_MIME_PREFIX_AUDIO                                   "audio/"
+#define DEFAULT_MIME_PREFIX_VIDEO                                   "video/"
+#define DEFAULT_MIME_PREFIX_APP                                     "application/"
+
+#define DEFAULT_MIME_TEXT                                           "text"
+#define DEFAULT_MIME_XML                                            "xml"
+#define DEFAULT_MIME_SHELLSCRIPT                                    "x-shellscript"
+#define DEFAULT_MIME_JAVASCRIPT                                     "javascript"
+
 
 #endif // CONSTANTS
 

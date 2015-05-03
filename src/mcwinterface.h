@@ -143,6 +143,10 @@
 #define DEFAULT_FILTER_SHOW_HIDDEN              0x0001
 
 
+// Search Options
+#define DEFAULT_SEARCH_OPTION_CASE_SENSITIVE    0x0001
+#define DEFAULT_SEARCH_OPTION_WHOLE_WORD        0x0010
+
 
 // Default Root File Server Idle Timeout in Millisecs
 #define DEFAULT_ROOT_FILE_SERVER_IDLE_TIMEOUT   1000

@@ -157,8 +157,7 @@ protected slots:
                                   const QString& aTarget);
 
     // Send File Search Item Item Found
-    void sendFileSearchItemFound(const QString& aOp,
-                                 const QString& aPath,
+    void sendFileSearchItemFound(const QString& aPath,
                                  const QString& aFilePath);
 
 
@@ -278,6 +277,9 @@ protected:
                                       const quint64& aNumFiles,
                                       const quint64& aScannedSize,
                                       void* aContext);
+
+    // File Search Item Found Callback
+    static void fileSearchItemFoundCB(const QString& aPath, const QString& aFilePath, void* aContext);
 
 private:
     friend class FileServer;

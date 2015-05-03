@@ -671,7 +671,7 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
     // Get Content for Search
     content     = lastOperationDataMap[DEFAULT_KEY_CONTENT].toString();
 
-    qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - operation: " << operation;
+    //qDebug() << "FileServerConnection::parseRequest - cID: " << cID << " - operation: " << operation;
 
     // Get Operation ID
     int opID = operationMap[operation];
@@ -1935,10 +1935,39 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
 //==============================================================================
 void FileServerConnection::searchFile(const QString& aName, const QString& aDirPath, const QString& aContent, const int& aOptions)
 {
-    qDebug() << "FileServerConnection::searchFile - cID: " << cID << " - aName: " << aName << " - aDirPath: " << aDirPath << " - aContent: " << aContent << " - aOptions: " << aOptions;
+    // Init Local Path
+    QString localPath(aDirPath);
 
-    // ...
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_SEARCH_FILE, localPath, "", "");
 
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Source File Exists
+    if (!checkSourceFileExists(localPath, true)) {
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Init Dir Info
+    QFileInfo dirInfo(localPath);
+
+    // Check Dir Info
+    if (dirInfo.isDir() || dirInfo.isBundle()) {
+        qDebug() << "FileServerConnection::searchFile - cID: " << cID << " - aName: " << aName << " - aDirPath: " << aDirPath << " - aContent: " << aContent << " - aOptions: " << aOptions;
+
+        // Search Directory
+        searchDirectory(aDirPath, aName, aContent, aOptions, abortFlag, fileSearchItemFoundCB, this);
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+    }
+
+    sendFinished(DEFAULT_OPERATION_SEARCH_FILE, aDirPath, "", "");
 }
 
 //==============================================================================
@@ -2302,16 +2331,15 @@ void FileServerConnection::sendFileOpQueueItemFound(const QString& aOp, const QS
 //==============================================================================
 // Send File Search Item Item Found
 //==============================================================================
-void FileServerConnection::sendFileSearchItemFound(const QString& aOp, const QString& aPath, const QString& aFilePath)
+void FileServerConnection::sendFileSearchItemFound(const QString& aPath, const QString& aFilePath)
 {
-    //qDebug() << "FileServerConnection::sendFileSearchItemFound - aOp: " << aOp << " - aPath: " << aPath << " - aFilePath: " << aFilePath;
+    //qDebug() << "FileServerConnection::sendFileSearchItemFound - aPath: " << aPath << " - aFilePath: " << aFilePath;
 
     // Init New Data Map
     QVariantMap newDataMap;
 
     // Setup New Data Map
     newDataMap[DEFAULT_KEY_CID]         = cID;
-    newDataMap[DEFAULT_KEY_OPERATION]   = aOp;
     newDataMap[DEFAULT_KEY_PATH]        = aPath;
     newDataMap[DEFAULT_KEY_FILENAME]    = aFilePath;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_SEARCH);
@@ -2683,6 +2711,21 @@ void FileServerConnection::dirSizeScanProgressCB(const QString& aPath,
     if (self) {
         // Send Dir Size Scan Progress
         self->sendDirSizeScanProgress(aPath, aNumDirs, aNumFiles, aScannedSize);
+    }
+}
+
+//==============================================================================
+// File Search Item Found Callback
+//==============================================================================
+void FileServerConnection::fileSearchItemFoundCB(const QString& aPath, const QString& aFilePath, void* aContext)
+{
+    // Check Context
+    FileServerConnection* self = static_cast<FileServerConnection*>(aContext);
+
+    // Check Self
+    if (self) {
+        // Send Dir Size Scan Progress
+        self->sendFileSearchItemFound(aPath, aFilePath);
     }
 }
 
