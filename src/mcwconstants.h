@@ -16,8 +16,7 @@
 #define DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE                   "rm -f %1"
 
 
-
-#define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           8192
+#define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           65536   // 131072
 
 
 #if defined (Q_OS_OSX)

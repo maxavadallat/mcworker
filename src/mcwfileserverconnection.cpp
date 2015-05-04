@@ -555,7 +555,7 @@ void FileServerConnection::processLastBuffer()
         break;
 
         case EFSCOTAcknowledge:
-            qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
+            //qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - ACKNOWLEDGE!";
             // Handle Acknowledge
             handleAcknowledge();
         break;
@@ -2097,8 +2097,11 @@ void FileServerConnection::sendProgress(const QString& aOp,
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    //worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        worker->wait();
+    }
 }
 
 //==============================================================================
@@ -2213,7 +2216,7 @@ int FileServerConnection::sendError(const QString& aOp, const QString& aPath, co
     writeDataWithSignal(newDataMap);
 
     // Check Wait
-    if (aWait) {
+    if (aWait && worker) {
         // Wait
         worker->wait();
     }
