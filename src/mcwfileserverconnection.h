@@ -196,8 +196,9 @@ protected slots: // FileServerConnectionWorker
 
     // Create Directory
     void createDir(const QString& aDirPath);
-    // Delete File/Directory
-    void deleteEntry(const QString& aFilePath);
+
+    // Delete Operation
+    void deleteOperation(const QString& aFilePath);
 
     // Set File Permissions
     void setFilePermissions(const QString& aFilePath, const int& aPermissions);
@@ -213,10 +214,10 @@ protected slots: // FileServerConnectionWorker
     // Scan Directory Tree
     void scanDirTree(const QString& aDirPath);
 
-    // Copy File
-    void copy(const QString& aSource, const QString& aTarget);
-    // Rename/Move File
-    void move(const QString& aSource, const QString& aTarget);
+    // Copy Operation
+    void copyOperation(const QString& aSource, const QString& aTarget);
+    // Rename/Move Operation
+    void moveOperation(const QString& aSource, const QString& aTarget);
 
     // Search File
     void searchFile(const QString& aName, const QString& aDirPath, const QString& aContent, const int& aOptions);
@@ -239,8 +240,13 @@ protected:
     // Open Target File
     bool openTargetFile(const QString& aSourcePath, const QString& aTargetPath, QFile& aFile);
 
+    // Read Buffer
+    qint64 readBuffer(char* aBuffer, const qint64& aSize, QFile& aSourceFile, const QString& aSource, const QString& aTarget);
+    // Write Buffer
+    qint64 writeBuffer(char* aBuffer, const qint64& aSize, QFile& aTargetFile, const QString& aSource, const QString& aTarget);
+
     // Copy File
-    void copyFile(QString& aSource, QString& aTarget);
+    bool copyFile(QString& aSource, QString& aTarget);
     // Delete File
     void deleteFile(QString& aFilePath);
     // Rename File
