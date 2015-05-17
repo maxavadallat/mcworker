@@ -2114,7 +2114,7 @@ void FileServerConnection::sendProgress(const QString& aOp,
     // Check Worker
     if (worker) {
         // Wait
-        worker->wait();
+        //worker->wait();
     }
 }
 
@@ -2262,8 +2262,11 @@ void FileServerConnection::sendfileOpNeedConfirm(const QString& aOp, const int& 
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        worker->wait();
+    }
 }
 
 //==============================================================================
@@ -2289,8 +2292,11 @@ void FileServerConnection::sendDirSizeScanProgress(const QString& aPath, const q
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    //worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        //worker->wait();
+    }
 }
 
 //==============================================================================
@@ -2314,8 +2320,11 @@ void FileServerConnection::sendDirListItemFound(const QString& aPath, const QStr
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    //worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        //worker->wait();
+    }
 }
 
 //==============================================================================
@@ -2341,8 +2350,11 @@ void FileServerConnection::sendFileOpQueueItemFound(const QString& aOp, const QS
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        worker->wait();
+    }
 }
 
 //==============================================================================
@@ -2364,8 +2376,11 @@ void FileServerConnection::sendFileSearchItemFound(const QString& aPath, const Q
     // Write Data With Signal
     writeDataWithSignal(newDataMap);
 
-    // Wait
-    //worker->wait();
+    // Check Worker
+    if (worker) {
+        // Wait
+        worker->wait();
+    }
 }
 
 //==============================================================================

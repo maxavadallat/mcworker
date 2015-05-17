@@ -725,6 +725,9 @@ void searchDirectory(const QString& aDirPath,
     // Init Mime Database
     QMimeDatabase mimeDatabase;
 
+    // Init Local File Name Pattern
+    QString localFileNamePattern = aFilePattern.indexOf("*") == -1 ? QString("*") + aFilePattern + QString("*") : aFilePattern;
+
     // Init Dir Info
     QFileInfo dirInfo(aDirPath);
 
@@ -760,7 +763,7 @@ void searchDirectory(const QString& aDirPath,
             if ((fileInfo.isDir() || fileInfo.isBundle()) && !fileInfo.isSymLink()) {
 
                 // Check If Pattern Matches - Simple File Search
-                if (dir.match(aFilePattern, fileInfo.fileName()) && aContentPattern.isEmpty()) {
+                if (dir.match(localFileNamePattern, fileInfo.fileName()) && aContentPattern.isEmpty()) {
                     // Check Callback
                     if (aCallback) {
                         // Callback
@@ -771,11 +774,11 @@ void searchDirectory(const QString& aDirPath,
                 __SD_CHECK_ABORT;
 
                 // Search Directory
-                searchDirectory(fileInfo.absoluteFilePath(), aFilePattern, aContentPattern, aOptions, aAbort, aCallback, aContext);
+                searchDirectory(fileInfo.absoluteFilePath(), localFileNamePattern, aContentPattern, aOptions, aAbort, aCallback, aContext);
 
             } else {
                 // Check If Pattern Matches
-                if (dir.match(aFilePattern, fileInfo.fileName())) {
+                if (dir.match(localFileNamePattern, fileInfo.fileName())) {
                     // Check Content Pattern
                     if (!aContentPattern.isEmpty()) {
                         // Get Mime
