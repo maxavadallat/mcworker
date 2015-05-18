@@ -43,6 +43,7 @@
 #define DEFAULT_MIME_XML                                            "xml"
 #define DEFAULT_MIME_SHELLSCRIPT                                    "x-shellscript"
 #define DEFAULT_MIME_JAVASCRIPT                                     "javascript"
+#define DEFAULT_MIME_SUBRIP                                         "x-subrip"
 
 
 #endif // CONSTANTS

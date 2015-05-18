@@ -671,6 +671,11 @@ bool isMimeSupportedByContentSearch(const QString& aMimeType)
         return true;
     }
 
+    // Check Mime Type - Sub Rip
+    if (aMimeType.contains(DEFAULT_MIME_SUBRIP)) {
+        return true;
+    }
+
     return false;
 }
 
@@ -679,6 +684,9 @@ bool isMimeSupportedByContentSearch(const QString& aMimeType)
 //==============================================================================
 bool isWhiteSpace(const QChar& aChar)
 {
+    if (aChar.isNull())
+        return true;
+
     return aChar.isSpace();
 }
 
@@ -698,10 +706,10 @@ bool checkPatternSurroundings(const QString& aContent, const QString& aPattern, 
     int cLength = aContent.length();
 
     // Get Prepending Char
-    QChar preChar = aContent[aIndex - 1];
+    QChar preChar = (aIndex > 0) ? aContent[aIndex - 1] : QChar('\0');
 
     // Get Trailing Char
-    QChar trailChar = aContent[aIndex + pLength];
+    QChar trailChar = (aIndex + pLength < cLength) ? aContent[aIndex + pLength] : QChar('\0');
 
     // Check Index
     if (((aIndex == 0) || isWhiteSpace(preChar)) && (isWhiteSpace(trailChar) || (aIndex + pLength >= cLength))) {
