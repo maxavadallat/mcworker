@@ -890,7 +890,7 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
     // Get File Info List Count
     int filCount = fiList.count();
 
-    qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << filCount << " - st: " << sortType << " - df: " << dirFirst << " - r: " << reverse << " - cs: " << caseSensitive;
+    //qDebug() << "FileServerConnection::getDirList - cID: " << cID << " - aDirPath: " << aDirPath << " - eilCount: " << filCount << " - st: " << sortType << " - df: " << dirFirst << " - r: " << reverse << " - cs: " << caseSensitive;
 
     // Go Thru List
     for (int i=0; i<filCount; ++i) {

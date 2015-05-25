@@ -326,7 +326,7 @@ int nameSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
             return dfr;
     }
 
-    // Case Insensitive Comparison
+    // Compare Items
     int result = cs ? fnstrcmp(a.fileName(), b.fileName()) : fnstricmp(a.fileName(), b.fileName());
 
     return r ? -result : result;
@@ -363,7 +363,7 @@ int extSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& d
         // Adjust Result
         result = -1;
     } else {
-        // Case Insensitive Comparison
+        // Compare Items
         result = cs ? fnstrcmp(a.suffix(), b.suffix()) : fnstricmp(a.suffix(), b.suffix());
     }
 
@@ -392,7 +392,7 @@ int typeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
             return dfr;
     }
 
-    // Case Insensitive Comparison
+    // Compare Items
     int result = fnstrcmp(a.fileName(), b.fileName());
 
     return r ? -result : result;
