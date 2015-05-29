@@ -15,6 +15,7 @@ enum FSCOperationType
     EFSCOTScanDir,
     EFSCOTTreeDir,
     EFSCOTMakeDir,
+    EFSCOTMakeLink,
     EFSCOTDeleteFile,
     EFSCOTSearchFile,
     EFSCOTCopyFile,
@@ -196,6 +197,9 @@ protected slots: // FileServerConnectionWorker
 
     // Create Directory
     void createDir(const QString& aDirPath);
+
+    // Create Link
+    void createLink(const QString& aLinkPath, const QString& aLinkTarget);
 
     // Delete Operation
     void deleteOperation(const QString& aFilePath);

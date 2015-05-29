@@ -56,6 +56,7 @@
 #define DEFAULT_OPERATION_SCAN_DIR              "SD"
 #define DEFAULT_OPERATION_TREE_DIR              "TD"
 #define DEFAULT_OPERATION_MAKE_DIR              "MD"
+#define DEFAULT_OPERATION_MAKE_LINK             "ML"
 #define DEFAULT_OPERATION_DELETE_FILE           "DEL"
 #define DEFAULT_OPERATION_QUEUE                 "QUE"
 #define DEFAULT_OPERATION_SEARCH_FILE           "SRCH"

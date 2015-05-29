@@ -122,7 +122,7 @@ bool setAttributes(const QString& aFileName, const int& aAttributes)
 //==============================================================================
 bool setPermissions(const QString& aFilePath, const int& aPermissions)
 {
-    return QFile::setPermissions(aFilePath,(QFileDevice::Permissions)aPermissions);
+    return QFile::setPermissions(aFilePath, (QFileDevice::Permissions)aPermissions);
 }
 
 //==============================================================================
@@ -158,17 +158,34 @@ bool setDateTime(const QString& aFilePath, const QDateTime& aDateTime)
 //==============================================================================
 // Create Dir
 //==============================================================================
-int createDir(const QString& aDirPath)
+int mcwuCreateDir(const QString& aDirPath)
 {
-    return QProcess::execute(QString(DEFAULT_CREATE_DIR_COMMAND_LINE_TEMPLATE).arg(aDirPath));
+    // Init Command Line
+    QString cmdLine = QString(DEFAULT_CREATE_DIR_COMMAND_LINE_TEMPLATE).arg(aDirPath);
+
+    return system(cmdLine.toLocal8Bit().data());
+}
+
+//==============================================================================
+// Create Link
+//==============================================================================
+int mcwuCreateLink(const QString& aLinkPath, const QString& aLinkTarget)
+{
+    // Init Command Line
+    QString cmdLine = QString(DEFAULT_CREATE_LINK_COMMAND_LINE_TEMPLATE).arg(aLinkTarget).arg(aLinkPath);
+
+    return system(cmdLine.toLocal8Bit().data());
 }
 
 //==============================================================================
 // Delete File
 //==============================================================================
-int deleteFile(const QString& aFilePath)
+int mcwuDeleteFile(const QString& aFilePath)
 {
-    return QProcess::execute(QString(DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE).arg(aFilePath));
+    // Init Command Line
+    QString cmdLine = QString(DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE).arg(aFilePath);
+
+    return system(cmdLine.toLocal8Bit().data());
 }
 
 //==============================================================================

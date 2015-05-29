@@ -89,6 +89,7 @@ void FileServerConnection::init()
     operationMap[DEFAULT_OPERATION_SCAN_DIR]    = EFSCOTScanDir;
     operationMap[DEFAULT_OPERATION_TREE_DIR]    = EFSCOTTreeDir;
     operationMap[DEFAULT_OPERATION_MAKE_DIR]    = EFSCOTMakeDir;
+    operationMap[DEFAULT_OPERATION_MAKE_LINK]   = EFSCOTMakeLink;
     operationMap[DEFAULT_OPERATION_DELETE_FILE] = EFSCOTDeleteFile;
     operationMap[DEFAULT_OPERATION_SEARCH_FILE] = EFSCOTSearchFile;
     operationMap[DEFAULT_OPERATION_COPY_FILE]   = EFSCOTCopyFile;
@@ -701,8 +702,13 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
         break;
 
         case EFSCOTMakeDir:
-            // Make Dir
+            // Create Dir
             createDir(path);
+        break;
+
+        case EFSCOTMakeLink:
+            // Create Link
+            createLink(source, target);
         break;
 
         case EFSCOTDeleteFile:
@@ -974,6 +980,60 @@ void FileServerConnection::createDir(const QString& aDirPath)
 
     // Send Finished
     sendFinished(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
+}
+
+//==============================================================================
+// Create Link
+//==============================================================================
+void FileServerConnection::createLink(const QString& aLinkPath, const QString& aLinkTarget)
+{
+    // Init Local Path
+    QString localPath = aLinkPath;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_MAKE_LINK, "", localPath, aLinkTarget);
+
+    // Check Link Exists
+    if (checkSourceDirExist(localPath, false)) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_MAKE_LINK, "", localPath, aLinkTarget);
+
+        return;
+    }
+
+    // Init Local Target
+    QString localTarget = aLinkTarget;
+
+    // Check Target Exists
+    if (!checkTargetFileExist(localTarget, true)) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_MAKE_LINK, "", localPath, localTarget);
+
+        return;
+    }
+
+    qDebug() << "FileServerConnection::createLink - cID: " << cID << " - localPath: " << localPath << " - localTarget: " << localTarget;
+
+    // Init Dir
+    QDir dir(QDir::homePath());
+
+    // Init Result
+    bool result = false;
+
+    do  {
+        // Make Link
+        result = (mcwuCreateLink(localPath, localTarget) == 0);
+
+        // Check Result
+        if (!result) {
+            // Send Error
+            sendError(DEFAULT_OPERATION_MAKE_LINK, "", localPath, localTarget, DEFAULT_ERROR_GENERAL);
+        }
+
+    } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_MAKE_LINK, "", localPath, localTarget);
 }
 
 //==============================================================================

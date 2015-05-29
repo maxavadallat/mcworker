@@ -106,10 +106,13 @@ bool setOwner(const QString& aFilePath, const QString& aOwner);
 bool setDateTime(const QString& aFilePath, const QDateTime& aDateTime);
 
 // Create Dir
-int createDir(const QString& aDirPath);
+int mcwuCreateDir(const QString& aDirPath);
+
+// Create Link
+int mcwuCreateLink(const QString& aLinkPath, const QString& aLinkTarget);
 
 // Delete File
-int deleteFile(const QString& aFilePath);
+int mcwuDeleteFile(const QString& aFilePath);
 
 // Check If Is Dir
 bool isDir(const QString& aDirPath);

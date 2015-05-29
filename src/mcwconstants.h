@@ -11,9 +11,11 @@
 
 #define DEFAULT_DIR_LIST_COMMAND_LINE_TEMPLATE                      "ls -1%1 %2"
 
-#define DEFAULT_CREATE_DIR_COMMAND_LINE_TEMPLATE                    "mkdir -p %1"
+#define DEFAULT_CREATE_DIR_COMMAND_LINE_TEMPLATE                    "mkdir -p \"%1\""
 
-#define DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE                   "rm -f %1"
+#define DEFAULT_CREATE_LINK_COMMAND_LINE_TEMPLATE                   "ln -s \"%1\" \"%2\""
+
+#define DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE                   "rm -f \"%1\""
 
 
 #define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           65536   // 131072
