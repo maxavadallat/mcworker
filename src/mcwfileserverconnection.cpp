@@ -54,6 +54,7 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QTcpSocket*
     , sortFlags(0)
     , response(0)
     , globalOptions(0)
+    , supressMergeConfirm(false)
     , path("")
     , filePath("")
     , source("")
@@ -572,6 +573,8 @@ void FileServerConnection::processLastBuffer()
             qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID << " - CLEAROPTIONS!";
             // Clear Global Options
             globalOptions = 0;
+            // Reset Supress Merege Confirm
+            supressMergeConfirm = false;
         break;
 
         case EFSCOTUserResponse:
@@ -1189,35 +1192,41 @@ void FileServerConnection::deleteDirectory(const QString& aDirPath)
             return;
         }
 
-        // Send Confirm
-        sendfileOpNeedConfirm(DEFAULT_OPERATION_DELETE_FILE, DEFAULT_ERROR_NON_EMPTY, localPath, "", "");
+        // Check Global Options
+        if (globalOptions & DEFAULT_CONFIRM_YESALL) {
 
-        // Switch Response
-        switch (response) {
-            case DEFAULT_CONFIRM_ABORT:
-                // Send Aborted
-                sendAborted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-            return;
+            // Global Option Is Set, no Confirm Needed
 
-            case DEFAULT_CONFIRM_NOALL:
-                // Add To Global Options
-                globalOptions |= DEFAULT_CONFIRM_NOALL;
-            case DEFAULT_CONFIRM_NO:
-                // Send Skipped
-                sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
-            return;
+        } else {
+            // Send Confirm
+            sendfileOpNeedConfirm(DEFAULT_OPERATION_DELETE_FILE, DEFAULT_ERROR_NON_EMPTY, localPath, "", "");
 
-            case DEFAULT_CONFIRM_YESALL:
-                // Add To Global Options
-                globalOptions |= DEFAULT_CONFIRM_YESALL;
-            case DEFAULT_CONFIRM_YES:
-                // Just Fall Thru
-            break;
+            // Switch Response
+            switch (response) {
+                case DEFAULT_CONFIRM_ABORT:
+                    // Send Aborted
+                    sendAborted(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+                return;
 
-            default:
-            break;
+                case DEFAULT_CONFIRM_NOALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_NOALL;
+                case DEFAULT_CONFIRM_NO:
+                    // Send Skipped
+                    sendSkipped(DEFAULT_OPERATION_DELETE_FILE, localPath, "", "");
+                return;
+
+                case DEFAULT_CONFIRM_YESALL:
+                    // Add To Global Options
+                    globalOptions |= DEFAULT_CONFIRM_YESALL;
+                case DEFAULT_CONFIRM_YES:
+                    // Just Fall Thru
+                break;
+
+                default:
+                break;
+            }
         }
-
 
         // Check Local Path
         if (!localPath.endsWith("/")) {
@@ -1503,6 +1512,9 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
     // Init Source Info
     QFileInfo sourceInfo(aSource);
 
+    // Get Source File Permissions
+    QFile::Permissions sourcePermissions =  sourceFile.permissions();
+
     // Check Abort Flag
     __CHECK_ABORTING_COPY;
 
@@ -1585,6 +1597,12 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
 
     // Close Target File
     targetFile.close();
+
+    // Set Target File Permissions
+    if (!targetFile.setPermissions(sourcePermissions)) {
+        qWarning() << "FileServerConnection::copyFile - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget << " - ERROR SETTING TARGET FILE PERMS!" ;
+    }
+
     // Close Source File
     sourceFile.close();
 
@@ -1618,6 +1636,7 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
     do {
         // Make Path
         success = targetDir.mkpath(localTarget);
+
         // Check Success
         if (!success) {
             // Send Error
@@ -1637,8 +1656,18 @@ void FileServerConnection::copyDirectory(const QString& aSourceDir, const QStrin
     // Init Source Dir
     QDir sourceDir(localSource);
 
+    // Init Filters
+    QDir::Filters filters = QDir::AllEntries | QDir::NoDotAndDotDot;
+
+    // Check Options
+    if (options & DEFAULT_COPY_OPTIONS_COPY_HIDDEN) {
+        // Adjust Filters
+        filters |=  QDir::Hidden;
+        filters |=  QDir::System;
+    }
+
     // Get Entry List
-    QStringList sourceEntryList = sourceDir.entryList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
+    QStringList sourceEntryList = sourceDir.entryList(filters);
 
     // Get Entry List Count
     int selCount = sourceEntryList.count();
@@ -2557,11 +2586,13 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
     if (fileInfo.exists()) {
         // Check Global Options
         if (globalOptions & DEFAULT_CONFIRM_YESALL) {
+
             // Delete Target File
             if (!aExpected && deleteTargetFile(aTargetPath)) {
 
                 return aExpected;
             }
+
         } else {
             // Send Need Confirm To Overwrite
             sendfileOpNeedConfirm(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), DEFAULT_ERROR_EXISTS, "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
@@ -2571,6 +2602,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
                 case DEFAULT_CONFIRM_YESALL:
                     // Add To Global Options
                     globalOptions |= DEFAULT_CONFIRM_YESALL;
+
                 case DEFAULT_CONFIRM_YES:
                     // Delete Target File
                     if (!aExpected && deleteTargetFile(aTargetPath)) {
@@ -2582,6 +2614,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
                 case DEFAULT_CONFIRM_NOALL:
                     // Add To Global Options
                     globalOptions |= DEFAULT_CONFIRM_NOALL;
+
                 case DEFAULT_CONFIRM_NO:
                     // Send Skipped
                     sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
@@ -2640,11 +2673,13 @@ bool FileServerConnection::deleteTargetFile(const QString& aFilePath)
     do {
         // Remove File
         success = dir.remove(aFilePath);
+
         // Check Success
         if (!success) {
             // Send Error
             sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aFilePath, DEFAULT_ERROR_GENERAL);
         }
+
     } while (!success && response == DEFAULT_CONFIRM_RETRY);
 
     return success;

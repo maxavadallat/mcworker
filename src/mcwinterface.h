@@ -143,6 +143,8 @@
 // Filter Options
 #define DEFAULT_FILTER_SHOW_HIDDEN              0x0001
 
+// Copy Options
+#define DEFAULT_COPY_OPTIONS_COPY_HIDDEN        0x0001
 
 // Search Options
 #define DEFAULT_SEARCH_OPTION_CASE_SENSITIVE    0x0001

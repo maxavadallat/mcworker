@@ -345,6 +345,9 @@ private:
     // Global File Operation Options
     int                         globalOptions;
 
+    // Supress Merge Confirm
+    bool                        supressMergeConfirm;
+
     // Path
     QString                     path;
     // File Path
