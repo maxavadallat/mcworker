@@ -1066,7 +1066,7 @@ void FileServerConnection::deleteOperation(const QString& aFilePath)
     QFileInfo fileInfo(localPath);
 
     // Check If Dir | Bundle
-    if (fileInfo.isDir() || fileInfo.isBundle()) {
+    if (!fileInfo.isSymLink() && (fileInfo.isDir() || fileInfo.isBundle())) {
 
         // Check Abort Flag
         __CHECK_ABORTING;
@@ -1483,12 +1483,17 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
             result = sourceFile.link(aTarget);
 
             // Check Result
-            if (result) {
+            if (!result) {
                 // Send Error
                 sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSource, aTarget, DEFAULT_ERROR_GENERAL);
             }
 
         } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+        if (result) {
+            // Send Finished
+            sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
+        }
 
         return result;
     }
