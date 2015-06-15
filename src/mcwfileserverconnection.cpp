@@ -1386,7 +1386,7 @@ void FileServerConnection::copyOperation(const QString& aSource, const QString& 
     QFileInfo sourceInfo(localSource);
 
     // Check Source Info
-    if (sourceInfo.isDir() || sourceInfo.isBundle()) {
+    if (!sourceInfo.isSymLink() && (sourceInfo.isDir() || sourceInfo.isBundle())) {
 
         // Copy Directory
         copyDirectory(localSource, localTarget);
@@ -1731,7 +1731,7 @@ void FileServerConnection::moveOperation(const QString& aSource, const QString& 
     QFileInfo sourceInfo(localSource);
 
     // Check Source Info
-    if (sourceInfo.isDir() || sourceInfo.isBundle()) {
+    if (!sourceInfo.isSymLink() && (sourceInfo.isDir() || sourceInfo.isBundle())) {
 
         // Move Directory
         moveDirectory(localSource, localTarget);
