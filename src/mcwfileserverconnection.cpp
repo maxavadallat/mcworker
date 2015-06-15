@@ -1466,6 +1466,33 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
     // Check Abort Flag
     __CHECK_ABORTING_FALSE;
 
+    // Init Source Info
+    QFileInfo sourceInfo(aSource);
+
+    // Check If Is A link
+    if (sourceInfo.isSymLink()) {
+
+        // Init Source File
+        QFile sourceFile(sourceInfo.symLinkTarget());
+
+        // Init Result
+        bool result = false;
+
+        do  {
+            // Create Target Link
+            result = sourceFile.link(aTarget);
+
+            // Check Result
+            if (result) {
+                // Send Error
+                sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSource, aTarget, DEFAULT_ERROR_GENERAL);
+            }
+
+        } while (!result && response == DEFAULT_CONFIRM_RETRY);
+
+        return result;
+    }
+
     // Check Target File Exists
     if (checkTargetFileExist(aTarget, false)) {
         return false;
@@ -1508,9 +1535,6 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
 
         return false;
     }
-
-    // Init Source Info
-    QFileInfo sourceInfo(aSource);
 
     // Get Source File Permissions
     QFile::Permissions sourcePermissions =  sourceFile.permissions();
