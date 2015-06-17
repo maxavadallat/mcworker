@@ -926,6 +926,9 @@ void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilte
 
         // Send Dir List Item Found
         sendDirListItemFound(localPath, fileName);
+
+        // Sleep a Bit
+        QThread::currentThread()->usleep(DEFAULT_DIR_LIST_SLEEP_TIIMEOUT_US);
     }
 
     // Check Abort Flag

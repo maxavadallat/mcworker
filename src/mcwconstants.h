@@ -48,5 +48,8 @@
 #define DEFAULT_MIME_SUBRIP                                         "x-subrip"
 
 
+#define DEFAULT_DIR_LIST_SLEEP_TIIMEOUT_US                          50
+
+
 #endif // CONSTANTS
 
