@@ -1804,8 +1804,13 @@ void FileServerConnection::renameFile(QString& aSource, QString& aTarget)
     // Check Abort Flag
     __CHECK_ABORTING;
 
+    // Check Source & Target
+    if (aSource == aTarget) {
+        return;
+    }
+
     // Check Target File Exists
-    if (checkTargetFileExist(aTarget, false)) {
+    if (aSource.toLower() != aTarget.toLower() && checkTargetFileExist(aTarget, false)) {
 
         return;
     }
@@ -2599,10 +2604,10 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
     // Init Dir Info
     QFileInfo fileInfo(aTargetPath);
     // Get File Exists
-    bool fileExits = fileInfo.exists();
+    bool fileExists = fileInfo.exists();
 
     // Check Expected
-    if (fileExits == aExpected) {
+    if (fileExists == aExpected) {
         return aExpected;
     }
 
@@ -2611,11 +2616,11 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
         // Send Skipped
         sendSkipped(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", lastOperationDataMap[DEFAULT_KEY_SOURCE].toString(), aTargetPath);
 
-        return fileExits;
+        return fileExists;
     }
 
     // Check If Exist
-    if (fileInfo.exists()) {
+    if (fileExists) {
         // Check Global Options
         if (globalOptions & DEFAULT_CONFIRM_YESALL) {
 
@@ -2663,7 +2668,7 @@ bool FileServerConnection::checkTargetFileExist(QString& aTargetPath, const bool
         }
     }
 
-    return fileExits;
+    return fileExists;
 }
 
 //==============================================================================
