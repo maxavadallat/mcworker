@@ -982,6 +982,14 @@ void FileServerConnection::createDir(const QString& aDirPath)
             sendError(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "", DEFAULT_ERROR_GENERAL);
         }
 
+        // Check Response
+        if (response == DEFAULT_CONFIRM_ABORT) {
+            // Send Aborted
+            sendAborted(DEFAULT_OPERATION_MAKE_DIR, localPath, "", "");
+
+            return;
+        }
+
     } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
     // Send Finished
@@ -1961,6 +1969,38 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
             return;
         }
     } else {
+
+        // Check If Local Source And Target Is The Same
+        if (localSource.toLower() == localTarget.toLower()) {
+            // Init Success
+            bool success = false;
+            // Init Dir
+            QDir dir(QDir::homePath());
+
+            do  {
+                // Check Abort Flag
+                __CHECK_ABORTING;
+                // Remove Target Dir
+                success = dir.rename(localSource, localTarget);
+                // Check Success
+                if (!success) {
+                    // Send Error
+                    sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget, DEFAULT_ERROR_GENERAL);
+                }
+            } while (!success && response == DEFAULT_CONFIRM_RETRY);
+
+            // Check Response
+            if (response == DEFAULT_CONFIRM_ABORT) {
+                // Send Aborted
+                sendAborted(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", localSource, localTarget);
+                return;
+            }
+
+            // Send Finished
+            sendFinished(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSourceDir, aTargetDir);
+
+            return;
+        }
 
         // Check Global Options
         if (globalOptions & DEFAULT_CONFIRM_NOALL) {
