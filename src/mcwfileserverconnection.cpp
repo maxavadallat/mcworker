@@ -1519,7 +1519,7 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
     }
 
     // Check Free Space
-    if (QStorageInfo(QFileInfo(aTarget).absoluteFilePath()).bytesFree() < sourceInfo.size()) {
+    if (QStorageInfo(QFileInfo(aTarget).absolutePath()).bytesFree() < sourceInfo.size()) {
 
         // Send Error
         sendError(lastOperationDataMap[DEFAULT_KEY_OPERATION].toString(), "", aSource, aTarget, DEFAULT_ERROR_NOT_ENOUGH_SPACE);
@@ -1641,11 +1641,6 @@ bool FileServerConnection::copyFile(QString& aSource, QString& aTarget)
 
         // Check Abort Flag
         __CHECK_ABORTING_COPY;
-
-        // Check Response
-        if (response == DEFAULT_CONFIRM_SKIP) {
-
-        }
 
         // Inc Bytes Writtem
         bytesWritten += bufferBytesWritten;
