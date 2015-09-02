@@ -7,7 +7,7 @@
 
 class FileServer;
 class FileServerConnectionWorker;
-
+class ArchiveEngine;
 
 enum FSCOperationType
 {
@@ -16,6 +16,7 @@ enum FSCOperationType
     EFSCOTTreeDir,
     EFSCOTMakeDir,
     EFSCOTMakeLink,
+    EFSCOTListArchive,
     EFSCOTDeleteFile,
     EFSCOTSearchFile,
     EFSCOTCopyFile,
@@ -161,6 +162,13 @@ protected slots:
     void sendFileSearchItemFound(const QString& aPath,
                                  const QString& aFilePath);
 
+    // Send Archive File List Item Found Slot
+    void sendArchiveListItemFound(const QString& aArchive,
+                                  const QString& aFilePath,
+                                  const quint64& aSize,
+                                  const QDateTime& aDate,
+                                  const QString& aAttribs,
+                                  const int& aFlags);
 
 protected slots: // QLocalSocket
 
@@ -200,6 +208,9 @@ protected slots: // FileServerConnectionWorker
 
     // Create Link
     void createLink(const QString& aLinkPath, const QString& aLinkTarget);
+
+    // List Archive
+    void listArchive(const QString& aFilePath, const QString& aDirPath, const int& aFilters, const int& aSortFlags);
 
     // Delete Operation
     void deleteOperation(const QString& aFilePath);
@@ -361,6 +372,13 @@ private:
 
     // Pending Operations
     QList<QVariantMap>          pendingOperations;
+
+    // Archive Mode
+    bool                        archiveMode;
+    // Archive Engine
+    ArchiveEngine*              archiveEngine;
+    // Supported Archive Formats
+    QStringList                 supportedFormats;
 };
 
 #endif // FILESERVERCONNECTION_H

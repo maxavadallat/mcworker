@@ -20,6 +20,7 @@
 #include "mcwfileserverconnection.h"
 #include "mcwfileserverconnectionstream.h"
 #include "mcwfileserverconnectionworker.h"
+#include "mcwarchiveengine.h"
 #include "mcwutility.h"
 #include "mcwconstants.h"
 
@@ -60,6 +61,9 @@ FileServerConnection::FileServerConnection(const unsigned int& aCID, QTcpSocket*
     , filePath("")
     , source("")
     , target("")
+    , content("")
+    , archiveMode(false)
+    , archiveEngine(NULL)
 {
     qDebug() << "FileServerConnection::FileServerConnection - cID: " << cID;
 
@@ -92,6 +96,7 @@ void FileServerConnection::init()
     operationMap[DEFAULT_OPERATION_TREE_DIR]    = EFSCOTTreeDir;
     operationMap[DEFAULT_OPERATION_MAKE_DIR]    = EFSCOTMakeDir;
     operationMap[DEFAULT_OPERATION_MAKE_LINK]   = EFSCOTMakeLink;
+    operationMap[DEFAULT_OPERATION_LIST_ARCHIVE]= EFSCOTListArchive;
     operationMap[DEFAULT_OPERATION_DELETE_FILE] = EFSCOTDeleteFile;
     operationMap[DEFAULT_OPERATION_SEARCH_FILE] = EFSCOTSearchFile;
     operationMap[DEFAULT_OPERATION_COPY_FILE]   = EFSCOTCopyFile;
@@ -515,7 +520,7 @@ void FileServerConnection::socketReadyRead()
 //==============================================================================
 void FileServerConnection::processLastBuffer()
 {
-   // qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID;
+    //qDebug() << "FileServerConnection::processLastBuffer - cID: " << cID;
 
     // Init New Data Stream
     FileServerConnectionStream newDataStream(lastBuffer);
@@ -713,6 +718,11 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
         case EFSCOTMakeLink:
             // Create Link
             createLink(source, target);
+        break;
+
+        case EFSCOTListArchive:
+            // List Archive
+            listArchive(filePath, path, filters, sortFlags);
         break;
 
         case EFSCOTDeleteFile:
@@ -1049,6 +1059,125 @@ void FileServerConnection::createLink(const QString& aLinkPath, const QString& a
 
     // Send Finished
     sendFinished(DEFAULT_OPERATION_MAKE_LINK, "", localPath, localTarget);
+}
+
+//==============================================================================
+// List Archive
+//==============================================================================
+void FileServerConnection::listArchive(const QString& aFilePath, const QString& aDirPath, const int& aFilters, const int& aSortFlags)
+{
+    // Init Local Path
+    QString localPath = aFilePath;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_LIST_ARCHIVE, localPath, aDirPath, "");
+
+    // Check Source File Exists
+    if (!checkSourceFileExists(localPath, true)) {
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_LIST_ARCHIVE, localPath, aDirPath, "");
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Archive Mode
+    if (!archiveMode) {
+        // Set Archive Mode
+        archiveMode = true;
+
+    }
+
+    // Check Archive Engine
+    if (!archiveEngine) {
+        // Create Archive Engine
+        archiveEngine = new ArchiveEngine();
+        // Get Supported Formats
+        supportedFormats = archiveEngine->getSupportedFormats();
+    }
+
+    // Get Extension
+    QString archiveFormat = getExtension(aFilePath);
+
+    // Check If Archive Supported
+    if (supportedFormats.indexOf(archiveFormat) < 0) {
+        // Send Error
+        sendError(DEFAULT_OPERATION_LIST_ARCHIVE, localPath, aDirPath, "", DEFAULT_ERROR_NOT_SUPPORTED);
+
+        // Send Aborted
+        sendAborted(DEFAULT_OPERATION_LIST_ARCHIVE, localPath, aDirPath, "");
+
+        return;
+    }
+
+    // Set Archive
+    archiveEngine->setArchive(localPath);
+
+    // Get Local Archive Path
+    QString archivePath = aDirPath;
+
+    // Check Archive Path
+    if (archivePath.length() > 1 && archivePath.endsWith("/")) {
+        // Adjust Archive Path
+        archivePath.chop(1);
+    }
+
+    qDebug() << "FileServerConnection::listArchive - cID: " << cID << " - localPath: " << localPath << " - archivePath: " << archivePath << " - aFilters: " << aFilters << " - aSortFlags: " << aSortFlags;
+
+    // Get Dir First
+    bool dirFirst           = aSortFlags & DEFAULT_SORT_DIRFIRST;
+    // Get Reverse
+    bool reverse            = aSortFlags & DEFAULT_SORT_REVERSE;
+    // Get Case Sensitive
+    bool caseSensitive      = aSortFlags & DEFAULT_SORT_CASE;
+
+    // Get Sort Type
+    FileSortType sortType   = (FileSortType)(aSortFlags & 0x000F);
+
+    // Set Sorting Mode
+    archiveEngine->setSortingMode(sortType, reverse, dirFirst, caseSensitive, false);
+
+    // Set Current Dir
+    archiveEngine->setCurrentDir(archivePath);
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // ...
+
+    // Get Archive Engine Current File List Count
+    int cflCount = archiveEngine->getCurrentFileListCount();
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Iterate Thru Current File List
+    for (int i=0; i<cflCount; i++) {
+
+        // Check Abort Flag
+        __CHECK_ABORTING;
+
+        // Get Archive File Info
+        ArchiveFileInfo* item = archiveEngine->getCurrentFileListItem(i);
+
+        // Init Flags
+        int flags = item->fileIsDir ? 0x0010 : 0x0000;
+        // Adjust Flags
+        flags |= item->fileIsLink ? 0x0001 : 0x0000;
+
+        // Send Archive File List Item Found
+        sendArchiveListItemFound(localPath, item->filePath, item->fileSize, item->fileDate, item->fileAttribs, flags);
+
+        // Sleep a Bit
+        QThread::currentThread()->usleep(DEFAULT_DIR_LIST_SLEEP_TIIMEOUT_US);
+    }
+
+    // ...
+
+    // Send Finished
+    sendFinished(DEFAULT_OPERATION_LIST_ARCHIVE, localPath, archivePath, "");
 }
 
 //==============================================================================
@@ -2402,7 +2531,7 @@ void FileServerConnection::sendAborted(const QString& aOp, const QString& aPath,
 //==============================================================================
 int FileServerConnection::sendError(const QString& aOp, const QString& aPath, const QString& aSource, const QString& aTarget, const int& aError, const bool& aWait)
 {
-    qDebug() << "FileServerConnection::sendError - aOp: " << aOp << " - aSource: " << aSource << " - aTarget: " << aTarget << " - aError: " << aError;
+    qDebug() << "#### FileServerConnection::sendError - aOp: " << aOp << " - aPath: " << aPath << " - aSource: " << aSource << " - aTarget: " << aTarget << " - aError: " << aError;
 
     // Init New Data
     QVariantMap newDataMap;
@@ -2572,6 +2701,41 @@ void FileServerConnection::sendFileSearchItemFound(const QString& aPath, const Q
     if (worker) {
         // Wait
         worker->wait();
+    }
+}
+
+//==============================================================================
+// Send Archive File List Item Found Slot
+//==============================================================================
+void FileServerConnection::sendArchiveListItemFound(const QString& aArchive,
+                                                    const QString& aFilePath,
+                                                    const quint64& aSize,
+                                                    const QDateTime& aDate,
+                                                    const QString& aAttribs,
+                                                    const int& aFlags)
+{
+    // Init New Data Map
+    QVariantMap newDataMap;
+
+    // Setup New Data Map
+    newDataMap[DEFAULT_KEY_CID]         = cID;
+    newDataMap[DEFAULT_KEY_FILENAME]    = aArchive;
+    newDataMap[DEFAULT_KEY_PATH]        = aFilePath;
+    newDataMap[DEFAULT_KEY_FILESIZE]    = aSize;
+    newDataMap[DEFAULT_KEY_DATETIME]    = aDate;
+    newDataMap[DEFAULT_KEY_ATTRIB]      = aAttribs;
+    newDataMap[DEFAULT_KEY_FLAGS]       = aFlags;
+    newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_ARCHIVEITEM);
+
+    // ...
+
+    // Write Data With Signal
+    writeDataWithSignal(newDataMap);
+
+    // Check Worker
+    if (worker) {
+        // Wait
+        //worker->wait();
     }
 }
 
@@ -2984,6 +3148,13 @@ FileServerConnection::~FileServerConnection()
         delete clientSocket;
         // Reset Client Socket
         clientSocket = NULL;
+    }
+
+    // Check Archive Engine
+    if (archiveEngine) {
+        // Delete Archive Engine
+        delete archiveEngine;
+        archiveEngine = NULL;
     }
 
     // Clear Pending Operations

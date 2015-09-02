@@ -86,9 +86,15 @@ bool isOnSameDrive(const QString& aPathOne, const QString& aPathTwo);
 
 // Get Parent Dir
 QString getParentDir(const QString& aDirPath);
+// Get File Name From File Path
+QString getFileNameFromFullPath(const QString& aFilePath);
 
-// Get Extension
-QString getExtension(const QString& aFilePath);
+// Gt File Name From Full File Name
+QString getFileName(const QString& aFullFileName);
+// Get Extension From Full File Name
+QString getExtension(const QString& aFullFileName);
+// Get Splitted - Name, Extension
+QStringList getSplited(const QString& aFullFileName);
 
 // Get File Attributes
 int getAttributes(const QString& aFilePath);
@@ -119,6 +125,11 @@ bool isDir(const QString& aDirPath);
 
 // Check If Dir Is Empty
 bool isDirEmpty(const QString& aDirPath);
+
+// Case In Sensitive Compare
+int fnstricmp(const QString& a, const QString& b);
+// Case Sensitive Compare
+int fnstrcmp(const QString& a, const QString& b);
 
 // Get Dir List
 QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidden = true);

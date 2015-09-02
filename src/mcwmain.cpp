@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//         File : mcwmain.cpp
+//  Description : Max Commander File Manager Worker Main File
+//       Author : Zoltan Petracs <maxavadallat@gmail.com>
+//
+//==============================================================================
+
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QStorageInfo>
@@ -31,8 +39,6 @@ int main(int argc, char* argv[])
 
     // Exec App
     int result = a.exec();
-
-    // ...
 
     qDebug() << " ";
     qDebug() << "================================================================================";

@@ -40,7 +40,7 @@ bool isOnSameDrive(const QString& aPathOne, const QString& aPathTwo)
     // Init Storage Info
     QStorageInfo storageTwo(fileInfoTwo.absolutePath());
 
-    qDebug() << "isOnSameDrive - volume1: " << storageOne.device() << " - volume2: " << storageTwo.device();
+    //qDebug() << "isOnSameDrive - volume1: " << storageOne.device() << " - volume2: " << storageTwo.device();
 
     // Compare Storage Info
     if (storageOne.device() == storageTwo.device()) {
@@ -53,6 +53,163 @@ bool isOnSameDrive(const QString& aPathOne, const QString& aPathTwo)
     return false;
 }
 
+//==============================================================================
+// Get Parent Dir
+//==============================================================================
+QString getParentDir(const QString& aDirPath)
+{
+    // Check Last Index Of
+    if (aDirPath.lastIndexOf("/") <= 0) {
+        return "/";
+    }
+
+    // Local Path
+    QString localPath(aDirPath);
+    // Check Local Path
+    if (localPath.endsWith("/")) {
+        // Chop Last
+        localPath.chop(1);
+    }
+
+    return localPath.left(localPath.lastIndexOf("/"));
+}
+
+//==============================================================================
+// Get File Name From File Path
+//==============================================================================
+QString getFileNameFromFullPath(const QString& aFilePath)
+{
+    // Local Path
+    QString localPath(aFilePath);
+    // Check Local Path
+    if (localPath.endsWith("/")) {
+        // Chop Last
+        localPath.chop(1);
+    }
+
+    // Get Last Index Of Slash
+    int lastSlashIndex = localPath.lastIndexOf("/");
+
+    // Check Last Index Of
+    if (lastSlashIndex < 0) {
+        return aFilePath;
+    }
+
+    return localPath.right(localPath.length() - lastSlashIndex - 1);
+}
+
+//==============================================================================
+// Gt File Name From Full File Name
+//==============================================================================
+QString getFileName(const QString& aFullFileName)
+{
+    // Get Last Dot Pos
+    int lastDotPos = aFullFileName.lastIndexOf(".");
+
+    // Check Last Dot Pos
+    if (lastDotPos <= 0) {
+        return aFullFileName;
+    }
+
+    // Check File Name
+    if (aFullFileName.endsWith(".")) {
+        return aFullFileName;
+    }
+
+    // Get File Name
+    QString fileName = aFullFileName.left(lastDotPos);
+
+    // Init Tar Extension
+    QString tarExt = QString(".%1").arg(DEFAULT_EXTENSION_TAR);
+
+    // Check File Name
+    if (fileName.endsWith(tarExt)) {
+        // Get Tar Extension Pos
+        int tarExtensionPos = fileName.indexOf(tarExt);
+
+        return aFullFileName.left(tarExtensionPos);
+    }
+
+    return aFullFileName.left(lastDotPos);
+}
+
+//==============================================================================
+// Get Extension
+//==============================================================================
+QString getExtension(const QString& aFullFileName)
+{
+    // Get Last Dot Pos
+    int lastDotPos = aFullFileName.lastIndexOf(".");
+
+    // Check Last Dot Pos
+    if (lastDotPos <= 0) {
+        return "";
+    }
+
+    // Check File Name
+    if (aFullFileName.endsWith(".")) {
+        return "";
+    }
+
+    // Get File Name
+    QString fileName = aFullFileName.left(lastDotPos);
+
+    // Init Tar Extension
+    QString tarExt = QString(".%1").arg(DEFAULT_EXTENSION_TAR);
+
+    // Check File Name
+    if (fileName.endsWith(tarExt)) {
+        // Get Tar Extension Pos
+        int tarExtensionPos = fileName.indexOf(tarExt);
+
+        return aFullFileName.right(aFullFileName.length() - tarExtensionPos - 1);
+    }
+
+    return aFullFileName.right(aFullFileName.length() - lastDotPos - 1);
+}
+
+//==============================================================================
+// Get Splitted - Name, Extension
+//==============================================================================
+QStringList getSplited(const QString& aFullFileName)
+{
+    // Init Result
+    QStringList result;
+
+    // Get Last Dot Pos
+    int lastDotPos = aFullFileName.lastIndexOf(".");
+
+    // Check Last Dot Pos
+    if (lastDotPos <= 0 || aFullFileName.endsWith(".")) {
+
+        result << aFullFileName;
+        result << "";
+
+        return result;
+    }
+
+    // Get File Name
+    QString fileName = aFullFileName.left(lastDotPos);
+
+    // Init Tar Extension
+    QString tarExt = QString(".%1").arg(DEFAULT_EXTENSION_TAR);
+
+    // Check File Name
+    if (fileName.endsWith(tarExt)) {
+        // Get Tar Extension Pos
+        int tarExtensionPos = fileName.indexOf(tarExt);
+
+        result << aFullFileName.left(tarExtensionPos);
+        result << aFullFileName.right(aFullFileName.length() - tarExtensionPos - 1);
+
+        return result;
+    }
+
+    result << aFullFileName.left(lastDotPos);
+    result << aFullFileName.right(aFullFileName.length() - lastDotPos - 1);
+
+    return result;
+}
 
 //==============================================================================
 // Get File Attribute
@@ -308,25 +465,16 @@ int dirFirst(const QFileInfo& a, const QFileInfo& b)
     if (!a.isDir() && !a.isSymLink() && (b.isDir() || b.isSymLink()))
         return 1;
 
-    // Check File Name
-    if (a.fileName() == QString(".") && b.fileName() != QString("."))
-        return -1;
+//    // Check File Name
+//    if (a.fileName() == QString(".") && b.fileName() != QString("."))
+//        return -1;
 
-    // Check File Name
-    if (a.fileName() != QString(".") && b.fileName() == QString("."))
-        return 1;
-
-    // Check File Name
-    if (a.fileName() == QString("..") && b.fileName() != QString(".."))
-        return -1;
-
-    // Check File Name
-    if (a.fileName() != QString("..") && b.fileName() == QString(".."))
-        return 1;
+//    // Check File Name
+//    if (a.fileName() != QString(".") && b.fileName() == QString("."))
+//        return 1;
 
     return 0;
 }
-
 
 //==============================================================================
 // Name Sort
@@ -342,6 +490,14 @@ int nameSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
         if (dfr)
             return dfr;
     }
+
+    // Check File Name
+    if (a.fileName() == QString("..") && b.fileName() != QString(".."))
+        return -1;
+
+    // Check File Name
+    if (a.fileName() != QString("..") && b.fileName() == QString(".."))
+        return 1;
 
     // Compare Items
     int result = cs ? fnstrcmp(a.fileName(), b.fileName()) : fnstricmp(a.fileName(), b.fileName());
@@ -367,21 +523,26 @@ int extSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& d
     // Init Result
     int result = 0;
 
+    // Get a Split
+    QStringList aSplit = getSplited(a.fileName());
+    // Get b Split
+    QStringList bSplit = getSplited(b.fileName());
+
     // Check If Both File Is a Dir Or Link
     if ((a.isDir() && b.isDir()) || (a.isSymLink() && b.isSymLink()) || (a.isDir() && b.isSymLink()) || (a.isSymLink() && b.isDir()))
         // Return Name Sort
         return nameSort(a, b, r, df, cs);
 
     // Check Base Name
-    if (a.baseName().isEmpty() && !b.baseName().isEmpty()) {
+    if (aSplit[0].isEmpty() && !bSplit[0].isEmpty()) {
         // Adjust Result
         result = 1;
-    } else if (!a.baseName().isEmpty() && b.baseName().isEmpty()) {
+    } else if (!aSplit[0].isEmpty() && bSplit[0].isEmpty()) {
         // Adjust Result
         result = -1;
     } else {
         // Compare Items
-        result = cs ? fnstrcmp(a.suffix(), b.suffix()) : fnstricmp(a.suffix(), b.suffix());
+        result = cs ? fnstrcmp(aSplit[1], bSplit[1]) : fnstricmp(aSplit[1], bSplit[1]);
     }
 
     // Check Result
