@@ -3,7 +3,7 @@
 TARGET                  = mcworker
 
 # Destination Dir
-DESTDIR                 = ../MaxCommander
+#DESTDIR                 = ../MaxCommander
 
 # Application Version
 VERSION                 = 0.0.1

@@ -868,6 +868,15 @@ void FileServerConnection::workerThreadFinished()
 //==============================================================================
 void FileServerConnection::getDirList(const QString& aDirPath, const int& aFilters, const int& aSortFlags)
 {
+    // Reset Archive Mode
+    archiveMode = false;
+
+    // Check Archive Engine
+    if (archiveEngine) {
+        // Clear
+        archiveEngine->clear();
+    }
+
     // Init Local Path
     QString localPath = aDirPath;
 

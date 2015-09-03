@@ -72,13 +72,15 @@ void ArchiveEngine::init()
 //==============================================================================
 void ArchiveEngine::checkSupportedFormats()
 {
-    //qDebug() << "ArchiveEngine::checkSupportedFormats";
+    qDebug() << "ArchiveEngine::checkSupportedFormats";
 
     // Clear Supported Formats
     supportedFormats.clear();
 
     // Get Nnumber Of Keys from Archives App Map
     int numKeys = archivesAppMap.keys().count();
+
+    //qDebug() << "ArchiveEngine::checkSupportedFormats - numKeys: " << numKeys;
 
     // Iterate Archives App Keys
     for (int i=0; i<numKeys; i++) {
@@ -88,7 +90,7 @@ void ArchiveEngine::checkSupportedFormats()
         QString archiveApp = archivesAppMap[archive];
 
         // Test App
-        if (system(QString("%1 > nul").arg(archiveApp).toLocal8Bit().data()) == 0) {
+        if (system(QString("%1").arg(archiveApp).toLocal8Bit().data()) == 0) {
             //qDebug() << "archive: " << archivesAppMap.keys()[i] << "app: " << archiveApp << " - SUPPORTED.";
 
             // Add Archive To Supported Formats
@@ -96,7 +98,6 @@ void ArchiveEngine::checkSupportedFormats()
 
         } else {
             //qDebug() << "archive: " << archivesAppMap.keys()[i] << "app: " << archiveApp << " - NOT SUPPORTED!!";
-
         }
     }
 
@@ -124,6 +125,11 @@ void ArchiveEngine::readFileList()
         // Set Read List Command
         readListCommand = QString(DEFAULT_LIST_RAR_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
 
+    } else if (currentFormat == DEFAULT_EXTENSION_ZIP) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_ZIP_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
     } else {
 
         // ...
@@ -132,7 +138,7 @@ void ArchiveEngine::readFileList()
 
     // Check Read List Command
     if (readListCommand.isEmpty()) {
-        qDebug() <<  "ArchiveEngine::readFileList - UNSUPPORTED FORMAT!";
+        qDebug() <<  "ArchiveEngine::readFileList - UNSUPPORTED FORMAT!!";
 
         return;
     }
@@ -144,7 +150,7 @@ void ArchiveEngine::readFileList()
 
     // Check Result
     if (result) {
-        qDebug() <<  "ArchiveEngine::readFileList - Error Executing Listing Archive: " << result;
+        qDebug() <<  "#### ArchiveEngine::readFileList - Error Executing Listing Archive: " << result;
 
         return;
     }
@@ -223,6 +229,8 @@ ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
             // Get File Date String
             QString fileDateString = lineItems[2].trimmed();
 
+            qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString;
+
             // Get File Date
             //QDateTime fileDate = QDateTime::fromString(fileDateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_RAR);
             QDateTime fileDate = QDateTime::fromString(fileDateString, Qt::ISODate);
@@ -264,6 +272,69 @@ ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
                 fileCounter++;
 
                 return newItem;
+            } else {
+                qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
+            }
+        }
+
+    // Check Current Format
+    } else if (currentFormat == DEFAULT_EXTENSION_ZIP) {
+
+        // Split Line
+        QStringList lineItems = currLine.split("  ", QString::SkipEmptyParts);
+        // Get Columns Count
+        int cCount = lineItems.count();
+
+        // Check Count
+        if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP) {
+
+            // Get File Date String
+            QString fileDateString = lineItems[1].trimmed();
+
+            qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString;
+
+            // Get File Date
+            //QDateTime fileDate = QDateTime::fromString(fileDateString, Qt::SystemLocaleShortDate);
+            QDateTime fileDate = QDateTime::fromString(fileDateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP);
+
+            // Check If Valid
+            if (fileDate.isValid()) {
+                // Init File Name String
+                QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP - 1];
+
+                // Get File Is Dir
+                bool isDir = filePathString.endsWith("/");
+
+                // Check If Is Dir
+                if (isDir) {
+                    filePathString.chop(1);
+                }
+
+                // Get File Size String
+                QString fileSizeString = isDir ? 0 : lineItems[0].trimmed();
+
+                // Create New File Info
+                ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), isDir);
+
+                // Set File Name
+                newItem->fileName    = getFileNameFromFullPath(filePathString);
+                // Set File Date
+                newItem->fileDate    = fileDate;
+                // Set Attribs
+                newItem->fileAttribs = "";
+                // Set File Is Link
+                newItem->fileIsLink  = false;
+
+                // ...
+
+                // Inc File Counters
+                fileCounter++;
+
+                return newItem;
+            } else {
+
+                //qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
+
             }
         }
 
@@ -345,6 +416,12 @@ void ArchiveEngine::clear()
 
     // Reset Current Dir
     currentDir = "";
+
+    // Reset Current Archive
+    currentArchive = "";
+
+    // Reset Current Format
+    currentFormat = "";
 
     // Clear Current File List
     clearCurrentFileList();

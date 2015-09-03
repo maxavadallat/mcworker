@@ -71,6 +71,9 @@ public:
     // Remove File
     void removeFile(const QString& aFilePath);
 
+    // Clear
+    void clear();
+
     // Destructor
     virtual ~ArchiveEngine();
 
@@ -111,9 +114,6 @@ protected:
 
     // Build Current File List
     void buildCurrentFileList();
-
-    // Clear
-    void clear();
 
     // Clear Current File List
     void clearCurrentFileList();

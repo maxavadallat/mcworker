@@ -36,6 +36,8 @@
 #define DEFAULT_LIST_RAR_CONTENT                                    "unrar l \"%1\" > %2"
 #define DEFAULT_LIST_ZIP_CONTENT                                    "unzip -l \"%1\" > %2"
 #define DEFAULT_LIST_GZIP_CONTENT                                   "gunzip -l \"%1\" > %2"
+#define DEFAULT_LIST_ARJ_CONTENT                                    "unarj -l \"%1\" > %2"
+#define DEFAULT_LIST_ACE_CONTENT                                    "unace -l \"%1\" > %2"
 #define DEFAULT_LIST_TAR_CONTENT                                    "tar -t \"%1\" > %2 "
 
 
@@ -79,6 +81,8 @@
 #define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_RAR                   "yyyy-MM-dd HH:mm"
 
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP                       3
+#define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP                   "MM-dd-yy HH:mm"
+
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ARJ                       3
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR                       3
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ACE                       3
