@@ -299,6 +299,12 @@ ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
 
             // Check If Valid
             if (fileDate.isValid()) {
+                // Check File Date
+                if (fileDate.date().year() < DEFAULT_ARCHIVE_DATE_RANGE_BEGIN) {
+                    // Adjust Year - HACK!!
+                    fileDate.setDate(fileDate.date().addYears(100));
+                }
+
                 // Init File Name String
                 QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP - 1];
 

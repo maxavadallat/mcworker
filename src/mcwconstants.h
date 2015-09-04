@@ -87,7 +87,7 @@
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR                       3
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ACE                       3
 
-
+#define DEFAULT_ARCHIVE_DATE_RANGE_BEGIN                            1980
 
 #endif // CONSTANTS
 
