@@ -71,6 +71,9 @@ public:
     // Remove File
     void removeFile(const QString& aFilePath);
 
+    // Extract Archive
+    void extractArchive(const QString& aTargetPath);
+
     // Clear
     void clear();
 
@@ -109,8 +112,18 @@ protected:
     // Parse Temp File List Line
     ArchiveFileInfo* parseTempListLine(const QString& aLine);
 
-    // Build Full File List
-    void buildFullFileList();
+    // Parse RAR File List Line
+    ArchiveFileInfo* parseRarListLine(const QString& aLine);
+    // Parse ZIP File List Line
+    ArchiveFileInfo* parseZipListLine(const QString& aLine);
+    // Parse TAR File List Line
+    ArchiveFileInfo* parseTarListLine(const QString& aLine);
+    // Parse GZ File List Line
+    ArchiveFileInfo* parseGZipListLine(const QString& aLine);
+    // Parse ARJ File List Line
+    ArchiveFileInfo* parseArjListLine(const QString& aLine);
+    // Parse ACE File List Line
+    ArchiveFileInfo* parseAceListLine(const QString& aLine);
 
     // Build Current File List
     void buildCurrentFileList();

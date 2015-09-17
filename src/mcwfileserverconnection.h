@@ -21,6 +21,7 @@ enum FSCOperationType
     EFSCOTSearchFile,
     EFSCOTCopyFile,
     EFSCOTMoveFile,
+    EFSCOTExtractFile,
     EFSCOTAbort,
     EFSCOTQuit,
     EFSCOTUserResponse,
@@ -233,6 +234,9 @@ protected slots: // FileServerConnectionWorker
     void copyOperation(const QString& aSource, const QString& aTarget);
     // Rename/Move Operation
     void moveOperation(const QString& aSource, const QString& aTarget);
+
+    // Extract Archive
+    void extractArchive(const QString& aSource, const QString& aTarget);
 
     // Search File
     void searchFile(const QString& aName, const QString& aDirPath, const QString& aContent, const int& aOptions);

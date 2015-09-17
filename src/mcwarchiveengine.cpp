@@ -60,6 +60,9 @@ void ArchiveEngine::init()
     archivesAppMap[DEFAULT_EXTENSION_ARJ]   = DEFAULT_APP_UNARJ;
     archivesAppMap[DEFAULT_EXTENSION_ACE]   = DEFAULT_APP_UNACE;
     archivesAppMap[DEFAULT_EXTENSION_TAR]   = DEFAULT_APP_UNTAR;
+    archivesAppMap[DEFAULT_EXTENSION_TGZ]   = DEFAULT_APP_UNTAR;
+    archivesAppMap[DEFAULT_EXTENSION_TARGZ] = DEFAULT_APP_UNTAR;
+    archivesAppMap[DEFAULT_EXTENSION_TARBZ] = DEFAULT_APP_UNTAR;
 
     // Check Supported Formats
     checkSupportedFormats();
@@ -105,6 +108,184 @@ void ArchiveEngine::checkSupportedFormats()
 }
 
 //==============================================================================
+// Set Archive
+//==============================================================================
+void ArchiveEngine::setArchive(const QString& aFilePath)
+{
+    // Check Current Archive
+    if (currentArchive != aFilePath) {
+
+        // Clear
+        clear();
+
+        qDebug() << "ArchiveEngine::setArchive - aFilePath: " << aFilePath;
+
+        // Set Current Archive File Path
+        currentArchive = aFilePath;
+
+        // Set Current Format
+        currentFormat = getExtension(currentArchive);
+
+        // Read File List
+        readFileList();
+
+        // Parse Temp File List
+        parseTempFileList();
+
+        // Emit Current File Path Changed
+        emit archiveChanged(currentArchive);
+
+        // Set Current Dir
+        setCurrentDir("/", true);
+    }
+}
+
+//==============================================================================
+// Get Archive
+//==============================================================================
+QString ArchiveEngine::getArchive()
+{
+    return currentArchive;
+}
+
+//==============================================================================
+// Set Current Dir Within the Archive
+//==============================================================================
+void ArchiveEngine::setCurrentDir(const QString& aDirPath, const bool& aForce)
+{
+    // Check Current Dir
+    if (currentDir != aDirPath || aForce) {
+        qDebug() << "ArchiveEngine::setCurrentDir - aDirPath: " << aDirPath;
+
+        // Set Current Dir Path
+        currentDir = aDirPath;
+
+        // Clear Current File Info List
+        clearCurrentFileList();
+        // Build Current File Info List
+        buildCurrentFileList();
+
+        // Emit Current Dir Changed
+        emit currentDirChanged(currentDir);
+
+        qDebug() << "ArchiveEngine::setCurrentDir - currFileCounter: " << currFileCounter;
+    }
+}
+
+//==============================================================================
+// Get Current Dir Within the Archive
+//==============================================================================
+QString ArchiveEngine::getCurrentDir()
+{
+    return currentDir;
+}
+
+//==============================================================================
+// Set Sorting Mode
+//==============================================================================
+void ArchiveEngine::setSortingMode(const int& aSorting, const bool& aReverse, const bool& aDirFirst, const bool& aCaseSensitive, const bool& aReload)
+{
+    // Check Sorting Mode
+    if (sortingMode != aSorting || sortReverse != aReverse || sortDirFirst != aDirFirst || sortCaseSensitive != aCaseSensitive) {
+        // Set Sorting Mode
+        sortingMode       = aSorting;
+        // Set Reverse Sort
+        sortReverse       = aReverse;
+        // Set Sort Dir First
+        sortDirFirst      = aDirFirst;
+        // Set Case Sensitive
+        sortCaseSensitive = aCaseSensitive;
+
+        // Check Reload
+        if (aReload) {
+            // Clear Current File List
+            clearCurrentFileList();
+            // Build current File List
+            buildCurrentFileList();
+        }
+    }
+}
+
+//==============================================================================
+// Get Current File List
+//==============================================================================
+ArchiveInfoList ArchiveEngine::getCurrentFileList() const
+{
+    return currFileInfoList;
+}
+
+//==============================================================================
+// Current File List Count
+//==============================================================================
+int ArchiveEngine::getCurrentFileListCount()
+{
+    return currFileInfoList.count();
+}
+
+//==============================================================================
+// Get Current File List Item
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::getCurrentFileListItem(const int& aIndex)
+{
+    return currFileInfoList[aIndex];
+}
+
+//==============================================================================
+// Get Full File List Count
+//==============================================================================
+int ArchiveEngine::getFilesCount()
+{
+    return fullFileInfoList.count();
+}
+
+//==============================================================================
+// Change Dir To Parent Dir
+//==============================================================================
+void ArchiveEngine::cdUP()
+{
+    qDebug() << "ArchiveEngine::cdUP - currentDir: " << currentDir;
+
+    // Get Parent Dir
+    QString parentDir = getParentDir(currentDir);
+
+    // Set Current Dir
+    setCurrentDir(parentDir);
+}
+
+//==============================================================================
+// Add File To Archive
+//==============================================================================
+void ArchiveEngine::addFile(const QString& aSourcePath, const QString& aTargetPath)
+{
+    // ...
+}
+
+//==============================================================================
+// Extract File
+//==============================================================================
+void ArchiveEngine::extractFile(const QString& aSourcePath, const QString& aTargetPath)
+{
+
+    // ...
+}
+
+//==============================================================================
+// Remove File
+//==============================================================================
+void ArchiveEngine::removeFile(const QString& aFilePath)
+{
+    // ...
+}
+
+//==============================================================================
+// Extract Archive
+//==============================================================================
+void ArchiveEngine::extractArchive(const QString& aTargetPath)
+{
+    // ...
+}
+
+//==============================================================================
 // Read File List
 //==============================================================================
 void ArchiveEngine::readFileList()
@@ -130,6 +311,31 @@ void ArchiveEngine::readFileList()
         // Set Read List Command
         readListCommand = QString(DEFAULT_LIST_ZIP_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
 
+    } else if (currentFormat == DEFAULT_EXTENSION_TAR) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_TAR_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
+    } else if (currentFormat == DEFAULT_EXTENSION_TARGZ || currentFormat == DEFAULT_EXTENSION_TGZ) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_TARGZ_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
+    } else if (currentFormat == DEFAULT_EXTENSION_TARBZ) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_TARBZ_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
+    } else if (currentFormat == DEFAULT_EXTENSION_ARJ) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_ARJ_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
+    } else if (currentFormat == DEFAULT_EXTENSION_ACE) {
+
+        // Set Read List Command
+        readListCommand = QString(DEFAULT_LIST_ACE_CONTENT).arg(currentArchive).arg(DEFAULT_ARCHIVE_LIST_OUTPUT);
+
     } else {
 
         // ...
@@ -138,7 +344,7 @@ void ArchiveEngine::readFileList()
 
     // Check Read List Command
     if (readListCommand.isEmpty()) {
-        qDebug() <<  "ArchiveEngine::readFileList - UNSUPPORTED FORMAT!!";
+        qWarning() <<  "ArchiveEngine::readFileList - UNSUPPORTED FORMAT!!";
 
         return;
     }
@@ -150,7 +356,7 @@ void ArchiveEngine::readFileList()
 
     // Check Result
     if (result) {
-        qDebug() <<  "#### ArchiveEngine::readFileList - Error Executing Listing Archive: " << result;
+        qWarning() <<  "#### ArchiveEngine::readFileList - Error Executing Listing Archive: " << result;
 
         return;
     }
@@ -214,141 +420,319 @@ ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
     // Get Current Line Trimmed
     QString currLine = aLine.trimmed();
 
-    // Check Current Format
+    // Check Current Format - RAR
     if (currentFormat == DEFAULT_EXTENSION_RAR) {
 
-        // Split Line
-        QStringList lineItems = currLine.split("  ", QString::SkipEmptyParts);
-        // Get Columns Count
-        int cCount = lineItems.count();
+        // Parse Rar List Line
+        return parseRarListLine(aLine.trimmed());
+    }
 
-        // Check Count
-        if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR) {
-            //qDebug() << lineItems;
+    // Check Current Format - ZIP
+    if (currentFormat == DEFAULT_EXTENSION_ZIP) {
 
-            // Get File Date String
-            QString fileDateString = lineItems[2].trimmed();
+        // Parse ZIP List Line
+        return parseZipListLine(aLine.trimmed());
+    }
 
-            qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString;
+    // Check Current Format - TAR
+    if (currentFormat == DEFAULT_EXTENSION_TAR || currentFormat == DEFAULT_EXTENSION_TGZ || currentFormat == DEFAULT_EXTENSION_TARGZ || currentFormat == DEFAULT_EXTENSION_TARBZ) {
 
-            // Get File Date
-            //QDateTime fileDate = QDateTime::fromString(fileDateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_RAR);
-            QDateTime fileDate = QDateTime::fromString(fileDateString, Qt::ISODate);
+        // Parse TAR List Line
+        return parseTarListLine(aLine.trimmed());
 
-            // Check If Valid
-            if (fileDate.isValid()) {
+    }
 
-                // Init File Name String
-                QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR - 1];
+    // Check Current Format - GZIP
+    if (currentFormat == DEFAULT_EXTENSION_GZIP) {
 
-                // Iterate Columns
-                for (int i=DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR; i<cCount; i++) {
-                    // Append More Items If Exists
-                    filePathString += lineItems[i];
-                }
+        // Parse GZIP List Line
+        return parseGZipListLine(aLine.trimmed());
+    }
 
-                //qDebug() << fileNameString;
 
-                // Get File Attributes String
-                QString fileAttribsString = lineItems[0].trimmed();
+    // Check Current Format - ARJ
+    if (currentFormat == DEFAULT_EXTENSION_ARJ) {
 
-                // Get File Size String
-                QString fileSizeString = lineItems[1].trimmed();
+        // Parse ARJ List Line
+        return parseArjListLine(aLine.trimmed());
+    }
 
-                // Create New File Info
-                ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), fileAttribsString.startsWith("d"));
-                // Set File Name
-                newItem->fileName    = getFileNameFromFullPath(filePathString);
-                // Set File Date
-                newItem->fileDate    = fileDate;
-                // Set Attribs
-                newItem->fileAttribs = fileAttribsString;
-                // Set File Is Link
-                newItem->fileIsLink  = fileAttribsString.startsWith("l");
+    // Check Current Format - ACE
+    if (currentFormat == DEFAULT_EXTENSION_ACE) {
 
-                // ...
+        // Parse ACE List Line
+        return parseAceListLine(aLine.trimmed());
+    }
 
-                // Inc File Counters
-                fileCounter++;
+    qWarning() << "ArchiveEngine::parseLine - aLine: " << aLine << " - UNSUPPORTED FORMAT!!";
 
-                return newItem;
-            } else {
-                qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
+    // Unsupported Format
+
+    return NULL;
+}
+
+//==============================================================================
+// Parse RAR File List Line
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::parseRarListLine(const QString& aLine)
+{
+    // Split Line
+    QStringList lineItems = aLine.split("  ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
+
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR) {
+        //qDebug() << lineItems;
+
+        // Get File Date String
+        QString fileDateString = lineItems[2].trimmed();
+
+        //qDebug() << "ArchiveEngine::parseRarListLine - fileDateString: " << fileDateString;
+
+        // Get File Date
+        QDateTime fileDateTime = QDateTime::fromString(fileDateString, Qt::ISODate);
+
+        // Check If Valid
+        if (fileDateTime.isValid()) {
+
+            // Init File Name String
+            QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR - 1];
+
+            // Iterate Columns
+            for (int i=DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR; i<cCount; i++) {
+                // Append More Items If Exists
+                filePathString += lineItems[i];
             }
+
+            //qDebug() << fileNameString;
+
+            // Get File Attributes String
+            QString fileAttribsString = lineItems[0].trimmed();
+
+            // Get File Size String
+            QString fileSizeString = lineItems[1].trimmed();
+
+            // Create New File Info
+            ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), fileAttribsString.startsWith("d"));
+            // Set File Date
+            newItem->fileDate    = fileDateTime;
+            // Set Attribs
+            newItem->fileAttribs = fileAttribsString;
+            // Set File Is Link
+            newItem->fileIsLink  = fileAttribsString.startsWith("l");
+
+            // ...
+
+            // Inc File Counters
+            fileCounter++;
+
+            return newItem;
+
+        } else {
+            qDebug() << "ArchiveEngine::parseRarListLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
+        }
+    }
+
+    return NULL;
+}
+
+//==============================================================================
+// Parse ZIP File List Line
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::parseZipListLine(const QString& aLine)
+{
+    // Split Line
+    QStringList lineItems = aLine.split("  ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
+
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP) {
+
+        // Get File Date String
+        QString fileDateString = lineItems[1].trimmed();
+
+        //qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString;
+
+        // Get File Date
+        //QDateTime fileDate = QDateTime::fromString(fileDateString, Qt::SystemLocaleShortDate);
+        QDateTime fileDateTime = QDateTime::fromString(fileDateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP);
+
+        // Check If Valid
+        if (fileDateTime.isValid()) {
+            // Check File Date
+            if (fileDateTime.date().year() < DEFAULT_ARCHIVE_DATE_RANGE_BEGIN) {
+                // Adjust Year - HACK!!
+                fileDateTime.setDate(fileDateTime.date().addYears(100));
+            }
+
+            // Init File Name String
+            QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP - 1];
+
+            // Get File Is Dir
+            bool isDir = filePathString.endsWith("/");
+
+            // Check If Is Dir
+            if (isDir) {
+                filePathString.chop(1);
+            }
+
+            // Get File Size String
+            QString fileSizeString = isDir ? "0" : lineItems[0].trimmed();
+
+            // Create New File Info
+            ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), isDir);
+
+            // Set File Date
+            newItem->fileDate    = fileDateTime;
+            // Set Attribs
+            newItem->fileAttribs = "";
+            // Set File Is Link
+            newItem->fileIsLink  = false;
+
+            // ...
+
+            // Inc File Counters
+            fileCounter++;
+
+            return newItem;
+
+        } else {
+
+            //qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
+
+        }
+    }
+
+    return NULL;
+}
+
+//==============================================================================
+// Parse TAR File List Line
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::parseTarListLine(const QString& aLine)
+{
+    // Split Line
+    QStringList lineItems = aLine.split(" ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
+
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR) {
+
+        //qDebug() << lineItems;
+
+        // Get Attribs String
+        QString attribsString = lineItems[0];
+
+        // Get Is Dir
+        bool isDir = attribsString.startsWith("d");
+        // Get Is Link
+        bool isLink = attribsString.startsWith("l");
+
+        // Get Month String
+        QString monthString = lineItems[5].trimmed();
+        // Get Day String
+        QString dayString = lineItems[6].trimmed();
+
+        // Init Year String
+        QString yearString = "";
+
+        // Init Time String
+        QString timeString = "";
+
+        // Check Line Item
+        if (lineItems[7].trimmed().indexOf(":") >= 0) {
+            // Set Year String
+            yearString = QString("%1").arg(QDate::currentDate().year());
+            // Set Time String
+            timeString = lineItems[7].trimmed();
+        } else {
+            // Set Year String
+            yearString = lineItems[7].trimmed();
+            // Set Time String
+            timeString = "00:00";
         }
 
-    // Check Current Format
-    } else if (currentFormat == DEFAULT_EXTENSION_ZIP) {
+        // Get Date String
+        QString dateString = QString(DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_TAR_TEMPLATE).arg(yearString)
+                                                                                        .arg(monthString)
+                                                                                        .arg(dayString);
 
-        // Split Line
-        QStringList lineItems = currLine.split("  ", QString::SkipEmptyParts);
-        // Get Columns Count
-        int cCount = lineItems.count();
+        // Init File Date
+        QDate fileDate = QDate::fromString(dateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_TAR);
+        // Init File Time
+        QTime fileTime = QTime::fromString(timeString, DEFAULT_ARCHIVE_FILE_INFO_TIME_FORMAT_TAR);
 
-        // Check Count
-        if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP) {
+        // Init File Date Time
+        QDateTime fileDateTime;
 
-            // Get File Date String
-            QString fileDateString = lineItems[1].trimmed();
+        // Set Date
+        fileDateTime.setDate(fileDate);
+        // Set Time
+        fileDateTime.setTime(fileTime);
 
-            qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString;
+        // Check File Date Time
+        if (fileDateTime.isValid()) {
 
-            // Get File Date
-            //QDateTime fileDate = QDateTime::fromString(fileDateString, Qt::SystemLocaleShortDate);
-            QDateTime fileDate = QDateTime::fromString(fileDateString, DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP);
+            // Init File Name String
+            QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR-1];
 
-            // Check If Valid
-            if (fileDate.isValid()) {
-                // Check File Date
-                if (fileDate.date().year() < DEFAULT_ARCHIVE_DATE_RANGE_BEGIN) {
-                    // Adjust Year - HACK!!
-                    fileDate.setDate(fileDate.date().addYears(100));
-                }
-
-                // Init File Name String
-                QString filePathString = lineItems[DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP - 1];
-
-                // Get File Is Dir
-                bool isDir = filePathString.endsWith("/");
-
-                // Check If Is Dir
-                if (isDir) {
-                    filePathString.chop(1);
-                }
-
-                // Get File Size String
-                QString fileSizeString = isDir ? 0 : lineItems[0].trimmed();
-
-                // Create New File Info
-                ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), isDir);
-
-                // Set File Name
-                newItem->fileName    = getFileNameFromFullPath(filePathString);
-                // Set File Date
-                newItem->fileDate    = fileDate;
-                // Set Attribs
-                newItem->fileAttribs = "";
-                // Set File Is Link
-                newItem->fileIsLink  = false;
-
-                // ...
-
-                // Inc File Counters
-                fileCounter++;
-
-                return newItem;
-            } else {
-
-                //qDebug() << "ArchiveEngine::parseLine - fileDateString: " << fileDateString << " - INVALID DATE!!";
-
+            // Iterate Columns
+            for (int i=DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR; i<cCount; i++) {
+                // Append More Items If Exists
+                filePathString += lineItems[i];
             }
+
+            // Check File Path String
+            if (filePathString.endsWith("/")) {
+                // Chop Last Char
+                filePathString.chop(1);
+            }
+
+            qDebug() << filePathString;
+
+            // Get File Size String
+            QString fileSizeString = isDir ? "0" : lineItems[4].trimmed();
+
+            // Create New File Info
+            ArchiveFileInfo* newItem = new ArchiveFileInfo(filePathString.trimmed(), fileSizeString.toLongLong(), isDir);
+
+            // Set File Date
+            newItem->fileDate    = fileDateTime;
+            // Set Attribs
+            newItem->fileAttribs = attribsString;
+            // Set File Is Link
+            newItem->fileIsLink  = isLink;
+
+            // ...
+
+            // Inc File Counters
+            fileCounter++;
+
+            return newItem;
         }
+    }
 
-    } else {
+    return NULL;
+}
 
-        qWarning() << "ArchiveEngine::parseLine - aLine: " << aLine << " - UNSUPPORTED FORMAT!!";
+//==============================================================================
+// Parse GZ File List Line
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::parseGZipListLine(const QString& aLine)
+{
+    // Split Line
+    QStringList lineItems = aLine.split("  ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
 
-        // Unsupported Format
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_GZIP) {
+
+        qDebug() << lineItems;
+
 
     }
 
@@ -356,14 +740,45 @@ ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
 }
 
 //==============================================================================
-// Build Full File List
+// Parse ARJ File List Line
 //==============================================================================
-void ArchiveEngine::buildFullFileList()
+ArchiveFileInfo* ArchiveEngine::parseArjListLine(const QString& aLine)
 {
-    qDebug() << "ArchiveEngine::buildFullFileList - currentArchive: " << currentArchive;
+    // Split Line
+    QStringList lineItems = aLine.split("  ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
 
-    // ...
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ARJ) {
 
+        qDebug() << lineItems;
+
+
+    }
+
+    return NULL;
+}
+
+//==============================================================================
+// Parse ACE File List Line
+//==============================================================================
+ArchiveFileInfo* ArchiveEngine::parseAceListLine(const QString& aLine)
+{
+    // Split Line
+    QStringList lineItems = aLine.split("  ", QString::SkipEmptyParts);
+    // Get Columns Count
+    int cCount = lineItems.count();
+
+    // Check Count
+    if (cCount >= DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ACE) {
+
+        qDebug() << lineItems;
+
+
+    }
+
+    return NULL;
 }
 
 //==============================================================================
@@ -713,183 +1128,6 @@ int ArchiveEngine::attrCompare(ArchiveFileInfo* a, ArchiveFileInfo* b, const boo
 }
 
 //==============================================================================
-// Set Archive
-//==============================================================================
-void ArchiveEngine::setArchive(const QString& aFilePath)
-{
-    // Check Current Archive
-    if (currentArchive != aFilePath) {
-
-        // Clear
-        clear();
-
-        qDebug() << "ArchiveEngine::setArchive - aFilePath: " << aFilePath;
-
-        // Set Current Archive File Path
-        currentArchive = aFilePath;
-
-        // Set Current Format
-        currentFormat = getExtension(currentArchive);
-
-        // Read File List
-        readFileList();
-
-        // Parse Temp File List
-        parseTempFileList();
-
-        // Emit Current File Path Changed
-        emit archiveChanged(currentArchive);
-
-        // Set Current Dir
-        setCurrentDir("/", true);
-    }
-}
-
-//==============================================================================
-// Get Archive
-//==============================================================================
-QString ArchiveEngine::getArchive()
-{
-    return currentArchive;
-}
-
-//==============================================================================
-// Set Current Dir Within the Archive
-//==============================================================================
-void ArchiveEngine::setCurrentDir(const QString& aDirPath, const bool& aForce)
-{
-    // Check Current Dir
-    if (currentDir != aDirPath || aForce) {
-        qDebug() << "ArchiveEngine::setCurrentDir - aDirPath: " << aDirPath;
-
-        // Set Current Dir Path
-        currentDir = aDirPath;
-
-        // Clear Current File Info List
-        clearCurrentFileList();
-        // Build Current File Info List
-        buildCurrentFileList();
-
-        // Emit Current Dir Changed
-        emit currentDirChanged(currentDir);
-
-        qDebug() << "ArchiveEngine::setCurrentDir - currFileCounter: " << currFileCounter;
-    }
-}
-
-//==============================================================================
-// Get Current Dir Within the Archive
-//==============================================================================
-QString ArchiveEngine::getCurrentDir()
-{
-    return currentDir;
-}
-
-//==============================================================================
-// Set Sorting Mode
-//==============================================================================
-void ArchiveEngine::setSortingMode(const int& aSorting, const bool& aReverse, const bool& aDirFirst, const bool& aCaseSensitive, const bool& aReload)
-{
-    // Check Sorting Mode
-    if (sortingMode != aSorting || sortReverse != aReverse || sortDirFirst != aDirFirst || sortCaseSensitive != aCaseSensitive) {
-        // Set Sorting Mode
-        sortingMode       = aSorting;
-        // Set Reverse Sort
-        sortReverse       = aReverse;
-        // Set Sort Dir First
-        sortDirFirst      = aDirFirst;
-        // Set Case Sensitive
-        sortCaseSensitive = aCaseSensitive;
-
-        // Check Reload
-        if (aReload) {
-            // Clear Current File List
-            clearCurrentFileList();
-            // Build current File List
-            buildCurrentFileList();
-        }
-    }
-}
-
-//==============================================================================
-// Get Current File List
-//==============================================================================
-ArchiveInfoList ArchiveEngine::getCurrentFileList() const
-{
-    return currFileInfoList;
-}
-
-//==============================================================================
-// Current File List Count
-//==============================================================================
-int ArchiveEngine::getCurrentFileListCount()
-{
-    return currFileInfoList.count();
-}
-
-//==============================================================================
-// Get Current File List Item
-//==============================================================================
-ArchiveFileInfo* ArchiveEngine::getCurrentFileListItem(const int& aIndex)
-{
-    return currFileInfoList[aIndex];
-}
-
-//==============================================================================
-// Get Full File List Count
-//==============================================================================
-int ArchiveEngine::getFilesCount()
-{
-    return fullFileInfoList.count();
-}
-
-//==============================================================================
-// Change Dir To Parent Dir
-//==============================================================================
-void ArchiveEngine::cdUP()
-{
-    qDebug() << "ArchiveEngine::cdUP - currentDir: " << currentDir;
-
-    // Get Parent Dir
-    QString parentDir = getParentDir(currentDir);
-
-    // Set Current Dir
-    setCurrentDir(parentDir);
-}
-
-//==============================================================================
-// Add File To Archive
-//==============================================================================
-void ArchiveEngine::addFile(const QString& aSourcePath, const QString& aTargetPath)
-{
-    Q_UNUSED(aSourcePath);
-    Q_UNUSED(aTargetPath);
-
-    // ...
-}
-
-//==============================================================================
-// Extract File
-//==============================================================================
-void ArchiveEngine::extractFile(const QString& aSourcePath, const QString& aTargetPath)
-{
-    Q_UNUSED(aSourcePath);
-    Q_UNUSED(aTargetPath);
-
-    // ...
-}
-
-//==============================================================================
-// Remove File
-//==============================================================================
-void ArchiveEngine::removeFile(const QString& aFilePath)
-{
-    Q_UNUSED(aFilePath);
-
-    // ...
-}
-
-//==============================================================================
 // Destructor
 //==============================================================================
 ArchiveEngine::~ArchiveEngine()
@@ -934,7 +1172,7 @@ ArchiveEngine::~ArchiveEngine()
 ArchiveFileInfo::ArchiveFileInfo(const QString& aFilePath, const qint64& aSize, const bool& aDir, QObject* aParent)
     : QObject(aParent)
     , filePath(aFilePath)
-    , fileName("")
+    , fileName(getFileNameFromFullPath(filePath))
     , fileSize(aSize)
     , fileDate(QDateTime::currentDateTime())
     , fileAttribs("")

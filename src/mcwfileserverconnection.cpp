@@ -91,25 +91,26 @@ void FileServerConnection::init()
     // ...
 
     // Set Up Operation Map
-    operationMap[DEFAULT_OPERATION_LIST_DIR]    = EFSCOTListDir;
-    operationMap[DEFAULT_OPERATION_SCAN_DIR]    = EFSCOTScanDir;
-    operationMap[DEFAULT_OPERATION_TREE_DIR]    = EFSCOTTreeDir;
-    operationMap[DEFAULT_OPERATION_MAKE_DIR]    = EFSCOTMakeDir;
-    operationMap[DEFAULT_OPERATION_MAKE_LINK]   = EFSCOTMakeLink;
-    operationMap[DEFAULT_OPERATION_LIST_ARCHIVE]= EFSCOTListArchive;
-    operationMap[DEFAULT_OPERATION_DELETE_FILE] = EFSCOTDeleteFile;
-    operationMap[DEFAULT_OPERATION_SEARCH_FILE] = EFSCOTSearchFile;
-    operationMap[DEFAULT_OPERATION_COPY_FILE]   = EFSCOTCopyFile;
-    operationMap[DEFAULT_OPERATION_MOVE_FILE]   = EFSCOTMoveFile;
-    operationMap[DEFAULT_OPERATION_ABORT]       = EFSCOTAbort;
-    operationMap[DEFAULT_OPERATION_QUIT]        = EFSCOTQuit;
-    operationMap[DEFAULT_OPERATION_USER_RESP]   = EFSCOTUserResponse;
-    operationMap[DEFAULT_OPERATION_PAUSE]       = EFSCOTSuspend;
-    operationMap[DEFAULT_OPERATION_RESUME]      = EFSCOTResume;
-    operationMap[DEFAULT_OPERATION_ACKNOWLEDGE] = EFSCOTAcknowledge;
-    operationMap[DEFAULT_OPERATION_CLEAR]       = EFSCOTClearOpt;
+    operationMap[DEFAULT_OPERATION_LIST_DIR]        = EFSCOTListDir;
+    operationMap[DEFAULT_OPERATION_SCAN_DIR]        = EFSCOTScanDir;
+    operationMap[DEFAULT_OPERATION_TREE_DIR]        = EFSCOTTreeDir;
+    operationMap[DEFAULT_OPERATION_MAKE_DIR]        = EFSCOTMakeDir;
+    operationMap[DEFAULT_OPERATION_MAKE_LINK]       = EFSCOTMakeLink;
+    operationMap[DEFAULT_OPERATION_LIST_ARCHIVE]    = EFSCOTListArchive;
+    operationMap[DEFAULT_OPERATION_DELETE_FILE]     = EFSCOTDeleteFile;
+    operationMap[DEFAULT_OPERATION_SEARCH_FILE]     = EFSCOTSearchFile;
+    operationMap[DEFAULT_OPERATION_COPY_FILE]       = EFSCOTCopyFile;
+    operationMap[DEFAULT_OPERATION_MOVE_FILE]       = EFSCOTMoveFile;
+    operationMap[DEFAULT_OPERATION_EXTRACT_ARCHIVE] = EFSCOTExtractFile;
+    operationMap[DEFAULT_OPERATION_ABORT]           = EFSCOTAbort;
+    operationMap[DEFAULT_OPERATION_QUIT]            = EFSCOTQuit;
+    operationMap[DEFAULT_OPERATION_USER_RESP]       = EFSCOTUserResponse;
+    operationMap[DEFAULT_OPERATION_PAUSE]           = EFSCOTSuspend;
+    operationMap[DEFAULT_OPERATION_RESUME]          = EFSCOTResume;
+    operationMap[DEFAULT_OPERATION_ACKNOWLEDGE]     = EFSCOTAcknowledge;
+    operationMap[DEFAULT_OPERATION_CLEAR]           = EFSCOTClearOpt;
 
-    operationMap[DEFAULT_OPERATION_TEST]        = EFSCOTTest;
+    operationMap[DEFAULT_OPERATION_TEST]            = EFSCOTTest;
 
     // Init Frame Pattern
     framePattern.append(DEFAULT_DATA_FRAME_PATTERN_CHAR_1);
@@ -748,6 +749,11 @@ void FileServerConnection::parseRequest(const QVariantMap& aDataMap)
         case EFSCOTMoveFile:
             // Move/Rename File
             moveOperation(source, target);
+        break;
+
+        case EFSCOTExtractFile:
+            // Extract File
+            extractArchive(source, target);
         break;
 
         default:
@@ -2272,6 +2278,77 @@ void FileServerConnection::moveDirectory(const QString& aSourceDir, const QStrin
         // Send Finished
         sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", aSourceDir, aTargetDir);
     }
+}
+
+//==============================================================================
+// Extract Archive
+//==============================================================================
+void FileServerConnection::extractArchive(const QString& aSource, const QString& aTarget)
+{
+    // Init Local Source
+    QString localSource(aSource);
+    // Init Local Target
+    QString localTarget(aTarget);
+
+    qDebug() << "FileServerConnection::extractArchive - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+
+    // Send Started
+    sendStarted(operation, "", localSource, localTarget);
+
+    // Check Source File Exists
+    if (!checkSourceFileExists(localSource, true)) {
+        // Send Aborted
+        sendAborted(operation, "", localSource, localTarget);
+
+        return;
+    }
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Check Archive Engine
+    if (!archiveEngine) {
+        // Create Archive Engine
+        archiveEngine = new ArchiveEngine();
+        // Get Supported Formats
+        supportedFormats = archiveEngine->getSupportedFormats();
+    }
+
+    // Get Extension
+    QString archiveFormat = getExtension(localSource);
+
+    // Check If Archive Supported
+    if (supportedFormats.indexOf(archiveFormat) < 0) {
+        // Send Error
+        sendError(operation, "", localSource, localTarget, DEFAULT_ERROR_NOT_SUPPORTED);
+
+        // Send Aborted
+        sendAborted(operation, "", localSource, localTarget);
+
+        return;
+    }
+
+    // Set Archive
+    archiveEngine->setArchive(localSource);
+
+    // Check If Target Dir Exists
+    if (!checkTargetFileExist(localTarget, true)) {
+        // Send Aborted
+        sendAborted(operation, "", localSource, localTarget);
+
+        return;
+    }
+
+    // Extract Archive
+    archiveEngine->extractArchive(localTarget);
+
+    // ...
+
+    // Check Abort Flag
+    __CHECK_ABORTING;
+
+    // Send Finished
+    sendFinished(operation, "", localSource, localTarget);
 }
 
 //==============================================================================

@@ -59,6 +59,7 @@
 #define DEFAULT_OPERATION_MAKE_DIR                  "MD"
 #define DEFAULT_OPERATION_MAKE_LINK                 "ML"
 #define DEFAULT_OPERATION_LIST_ARCHIVE              "LA"
+#define DEFAULT_OPERATION_EXTRACT_ARCHIVE           "EA"
 #define DEFAULT_OPERATION_DELETE_FILE               "DEL"
 #define DEFAULT_OPERATION_QUEUE                     "QUE"
 #define DEFAULT_OPERATION_SEARCH_FILE               "SRCH"
@@ -171,6 +172,9 @@
 #define DEFAULT_EXTENSION_ARJ                       "arj"
 #define DEFAULT_EXTENSION_ACE                       "ace"
 #define DEFAULT_EXTENSION_TAR                       "tar"
+#define DEFAULT_EXTENSION_TGZ                       "tgz"
+#define DEFAULT_EXTENSION_TARGZ                     "tar.gz"
+#define DEFAULT_EXTENSION_TARBZ                     "tar.bz2"
 
 
 
