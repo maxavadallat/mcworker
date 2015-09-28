@@ -57,12 +57,6 @@ int main(int argc, char* argv[])
     qInstallMessageHandler(myMessageHandler);
 #endif
 
-    qDebug() << " ";
-    qDebug() << "================================================================================";
-    qDebug() << "Starting MCWorker...";
-    qDebug() << "================================================================================";
-    qDebug() << " ";
-
     // Init Application
     QCoreApplication a(argc, argv);
 
@@ -71,6 +65,13 @@ int main(int argc, char* argv[])
 
     // Init File Server
     FileServer fileServer(asRootArg == QString(DEFAULT_OPTION_RUNASROOT) ? DEFAULT_SERVER_LISTEN_ROOT_PATH : DEFAULT_SERVER_LISTEN_PATH);
+
+    qDebug() << " ";
+    qDebug() << "================================================================================";
+    qDebug() << (fileServer.getRootMode() ?  "Starting MCWorker as ROOT..." : "Starting MCWorker...");
+    qDebug() << "================================================================================";
+    qDebug() << " ";
+
     // Start Server
     fileServer.startServer();
 

@@ -14,6 +14,7 @@
 FileServer::FileServer(const QString& aServerName, QObject* aParent)
     : QObject(aParent)
     , serverName(aServerName)
+    , rootMode(serverName == QString(DEFAULT_SERVER_LISTEN_ROOT_PATH))
     , idleTimerID(-1)
     , idleTimerCounter(DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS)
 {
@@ -48,12 +49,12 @@ void FileServer::startServer()
     // Set Socket Options
     //server.setSocketOptions(QLocalServer::WorldAccessOption);
 
-    // Check Server Name if it is Root
-    if (serverName == QString(DEFAULT_SERVER_LISTEN_ROOT_PATH)) {
+    // Check Root Mode
+    if (rootMode) {
         // Listen
         server.listen(QHostAddress::Any, DEFAULT_FILE_SERVER_ROOT_HOST_PORT);
         // Start Idle Timer
-        startIdleTimer();
+        startRootModeIdleTimer();
     } else {
         // Listen
         server.listen(QHostAddress::Any, DEFAULT_FILE_SERVER_HOST_PORT);
@@ -74,13 +75,19 @@ void FileServer::stopServer()
 }
 
 //==============================================================================
+// Get Root Mode
+//==============================================================================
+bool FileServer::getRootMode()
+{
+    return rootMode;
+}
+
+//==============================================================================
 // New Client Connection Slot
 //==============================================================================
 void FileServer::newClientConnection()
 {
-//    qDebug() << " ";
-//    qDebug() << ">>>> FileServer::newClientConnection";
-//    qDebug() << " ";
+    qDebug() << "FileServer::newClientConnection";
 
     // Create New File Server Connection
     FileServerConnection* newServerConnection = new FileServerConnection(QDateTime::currentDateTime().toMSecsSinceEpoch(), server.nextPendingConnection());
@@ -89,15 +96,11 @@ void FileServer::newClientConnection()
     newServerConnection->writeData(QString("%1").arg(newServerConnection->cID).toLocal8Bit(), false);
 
     // Connect Signals
-    connect(newServerConnection, SIGNAL(activity(uint)), this, SLOT(clientActivity(uint)));
+    connect(newServerConnection, SIGNAL(activity(uint)), this, SLOT(clientActivity(uint)), Qt::QueuedConnection);
     connect(newServerConnection, SIGNAL(disconnected(uint)), this, SLOT(clientDisconnected(uint)));
 
     // Add To Clients
     clientList << newServerConnection;
-
-//    qDebug() << " ";
-//    qDebug() << "<<<< FileServer::newClientConnection";
-//    qDebug() << " ";
 }
 
 //==============================================================================
@@ -187,13 +190,15 @@ void FileServer::delayedExit()
 //==============================================================================
 // Start Idle Timer
 //==============================================================================
-void FileServer::startIdleTimer()
+void FileServer::startRootModeIdleTimer()
 {
     // Check Timer ID
     if (idleTimerID == -1) {
-        qDebug() << "FileServer::startIdleTimer";
         // Reset Counter
         idleTimerCounter = DEFAULT_ROOT_FILE_SERVER_IDLE_MAX_TICKS;
+
+        qDebug() << "FileServer::startRootModeIdleTimer - idleTimerCounter: " << idleTimerCounter;
+
         // Start Timer
         idleTimerID = startTimer(DEFAULT_ROOT_FILE_SERVER_IDLE_TIMEOUT);
     }
@@ -202,11 +207,11 @@ void FileServer::startIdleTimer()
 //==============================================================================
 // Stop Idle Timer
 //==============================================================================
-void FileServer::stopIdleTimer()
+void FileServer::stopRootModeIdleTimer()
 {
     // Check Timer ID
     if (idleTimerID != -1) {
-        qDebug() << "FileServer::stopIdleTimer";
+        qDebug() << "FileServer::stopRootModeIdleTimer";
         // Kill Timer
         killTimer(idleTimerID);
         // Reset Timer ID
@@ -255,7 +260,7 @@ void FileServer::shutDown()
     qDebug() << "FileServer::shutDown";
 
     // Stop Idle Timer
-    stopIdleTimer();
+    stopRootModeIdleTimer();
 
     // Close All Connections
     closeAllConnections();
@@ -332,10 +337,12 @@ void FileServer::timerEvent(QTimerEvent* aEvent)
             // Decrease Idle Counter
             idleTimerCounter--;
 
+            //qDebug() << "FileServer::timerEvent - idleTimerCounter: " << idleTimerCounter;
+
             // Check Counter
             if (idleTimerCounter <= 0) {
-                // Close All Clients
-
+                // Shut Down
+                shutDown();
             }
         }
     }

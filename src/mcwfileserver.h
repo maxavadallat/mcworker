@@ -14,13 +14,15 @@ class FileServer : public QObject
 
 public:
     // Constructor
-    FileServer(const QString& aServerName, QObject* aParent = NULL);
+    explicit FileServer(const QString& aServerName, QObject* aParent = NULL);
 
     // Start Server
     void startServer();
-
     // Stop Server
     void stopServer();
+
+    // Get Root Mode
+    bool getRootMode();
 
     // Destructor
     virtual ~FileServer();
@@ -62,10 +64,10 @@ protected slots:
     void delayedExit();
 
     // Start Idle Timer
-    void startIdleTimer();
+    void startRootModeIdleTimer();
 
     // Stop Idle Timer
-    void stopIdleTimer();
+    void stopRootModeIdleTimer();
 
     // Restart Idle Timer
     void restartIdleCountdown();
@@ -79,6 +81,9 @@ private:
 
     // Server Name
     QString                         serverName;
+
+    // Root Mode
+    bool                            rootMode;
 
     // Local Server
     QTcpServer                      server;

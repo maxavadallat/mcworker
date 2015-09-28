@@ -375,6 +375,9 @@ void FileServerConnection::writeData(const QByteArray& aData, const bool& aFrame
         // Wait For Bytes Written
         clientSocket->waitForBytesWritten();
 
+        // Emit Activity
+        emit activity(cID);
+
         // Write Error
         if (bytesWritten - (aFramed ? framePattern.size() * 2 : 0) != aData.size()) {
             qWarning() << "#### FileServerConnection::writeData - cID: " << cID << " bytesWritten: " << bytesWritten << " - WRITE ERROR!!";
@@ -508,6 +511,9 @@ void FileServerConnection::socketReadyRead()
     QMutexLocker locker(&mutex);
 
     //qDebug() << "FileServerConnection::socketReadyRead - cID: " << cID << " - bytesAvailable: " << clientSocket->bytesAvailable();
+
+    // Emit Activity
+    emit activity(cID);
 
     // Read Data
     lastBuffer = clientSocket->readAll();
