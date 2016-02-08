@@ -278,10 +278,28 @@ void ArchiveEngine::removeFile(const QString& aFilePath)
 }
 
 //==============================================================================
+// View File
+//==============================================================================
+void ArchiveEngine::viewFile(const QString& aFilePath)
+{
+    // ...
+}
+
+//==============================================================================
 // Extract Archive
 //==============================================================================
 void ArchiveEngine::extractArchive(const QString& aTargetPath)
 {
+    // Check If File Exists
+    if (!QFile::exists(currentArchive)) {
+        return;
+    }
+
+    qDebug() << "ArchiveEngine::extractArchive - currentArchive: " << currentArchive;
+
+    // Init Read Command
+    QString extractCommand = "";
+
     // ...
 }
 
@@ -1181,8 +1199,9 @@ ArchiveFileInfo::ArchiveFileInfo(const QString& aFilePath, const qint64& aSize, 
     , fileIsLink(false)
 
 {
-    // Set File Name
-    fileName = getFileNameFromFullPath(aFilePath);
+
+    // ...
+
 }
 
 //==============================================================================

@@ -138,7 +138,7 @@ QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidde
 typedef int (*CompareFuncType)(const QFileInfo&, const QFileInfo&, const bool&, const bool&, const bool&);
 
 // Sort File List
-void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse = false, const bool& aDirFirst = true, const bool& aCase = true);
+void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort);
 
 // Dir Size Scan Propgress Callback Type
 typedef void (*dirSizeScanProgressCallback)(const QString&, const quint64&, const quint64&, const quint64&, void*);

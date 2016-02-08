@@ -390,7 +390,13 @@ QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidde
     // Init Dir
     QDir dir(newPath.replace("~/", QDir::homePath() + "/"));
 
-    return dir.entryInfoList(aShowHidden ? (QDir::AllEntries | QDir::Hidden | QDir::System) : QDir::AllEntries);
+    // Init Dir Filters
+    QDir::Filters dirFilters = aShowHidden ? (QDir::AllEntries | QDir::Hidden | QDir::System) : QDir::AllEntries;
+
+    // Add No Dot
+    dirFilters |= QDir::NoDot;
+
+    return dir.entryInfoList(dirFilters);
 }
 
 //==============================================================================
@@ -409,11 +415,16 @@ int fnstrcmp(const QString& a, const QString& b)
     return qstrcmp(a.toLocal8Bit().data(), b.toLocal8Bit().data());
 }
 
+// Check Abort Macro
+#define __QS_CHECK_ABORT        if (aAbort) { qDebug() << "#### QSABORT!"; return; }
+
 //==============================================================================
 // Quick Sort
 //==============================================================================
-void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSort, const bool& aReverse, const bool& aDirFirst, const bool& aCase)
+void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSort, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort)
 {
+    __QS_CHECK_ABORT;
+
     // Check Indexes
     if (aLeft < 0 || aRight < 0 || aList.count() <= 0)
         return;
@@ -426,13 +437,15 @@ void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSor
 
     // Partition
     while (i <= j) {
-        //while (sort(arr[i], pivot, reverse) == 1)
-        while (aSort(aList[i], pivot, aReverse, aDirFirst, aCase) < 0)
+        while ((aSort(aList[i], pivot, aReverse, aDirFirst, aCase) < 0))
             i++;
 
-        //while (sort(arr[j], pivot, reverse) == -1)
-        while (aSort(aList[j], pivot, aReverse, aDirFirst, aCase) > 0)
+        __QS_CHECK_ABORT;
+
+        while ((aSort(aList[j], pivot, aReverse, aDirFirst, aCase) > 0))
             j--;
+
+        __QS_CHECK_ABORT;
 
         if (i <= j) {
             aList.swap(i, j);
@@ -443,12 +456,16 @@ void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSor
 
     // Recursion
     if (aLeft < j) {
-        quickSort(aList, aLeft, j, aSort, aReverse, aDirFirst, aCase);
+        quickSort(aList, aLeft, j, aSort, aReverse, aDirFirst, aCase, aAbort);
+
+        __QS_CHECK_ABORT;
     }
 
     // Recursion
     if (i < aRight) {
-        quickSort(aList, i, aRight, aSort, aReverse, aDirFirst, aCase);
+        quickSort(aList, i, aRight, aSort, aReverse, aDirFirst, aCase, aAbort);
+
+        __QS_CHECK_ABORT;
     }
 }
 
@@ -719,7 +736,7 @@ int attrSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
 //==============================================================================
 // Sort File List
 //==============================================================================
-void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse, const bool& aDirFirst, const bool& aCase)
+void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort)
 {
     // Get File List Count
     int flCount = aFileInfoList.count();
@@ -729,14 +746,14 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
     // Switch Sorting Method
     switch (aSortType) {
         default:
-        case EFSTName:          quickSort(aFileInfoList, 0, flCount-1, nameSort, aReverse, aDirFirst, aCase); break;
-        case EFSTExtension:     quickSort(aFileInfoList, 0, flCount-1, extSort,  aReverse, aDirFirst, aCase); break;
-        case EFSTType:          quickSort(aFileInfoList, 0, flCount-1, typeSort, aReverse, aDirFirst, aCase); break;
-        case EFSTSize:          quickSort(aFileInfoList, 0, flCount-1, sizeSort, aReverse, aDirFirst, aCase); break;
-        case EFSTDate:          quickSort(aFileInfoList, 0, flCount-1, dateSort, aReverse, aDirFirst, aCase); break;
-        case EFSTOwnership:     quickSort(aFileInfoList, 0, flCount-1, ownSort,  aReverse, aDirFirst, aCase); break;
-        case EFSTPermission:    quickSort(aFileInfoList, 0, flCount-1, permSort, aReverse, aDirFirst, aCase); break;
-        case EFSTAttributes:    quickSort(aFileInfoList, 0, flCount-1, attrSort, aReverse, aDirFirst, aCase); break;
+        case EFSTName:          quickSort(aFileInfoList, 0, flCount-1, nameSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTExtension:     quickSort(aFileInfoList, 0, flCount-1, extSort,  aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTType:          quickSort(aFileInfoList, 0, flCount-1, typeSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTSize:          quickSort(aFileInfoList, 0, flCount-1, sizeSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTDate:          quickSort(aFileInfoList, 0, flCount-1, dateSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTOwnership:     quickSort(aFileInfoList, 0, flCount-1, ownSort,  aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTPermission:    quickSort(aFileInfoList, 0, flCount-1, permSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTAttributes:    quickSort(aFileInfoList, 0, flCount-1, attrSort, aReverse, aDirFirst, aCase, aAbort); break;
     }
 }
 

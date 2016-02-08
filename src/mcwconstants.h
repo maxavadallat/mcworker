@@ -19,33 +19,6 @@
 #define DEFAULT_DELETE_FILE_COMMAND_LINE_TEMPLATE                   "rm -f \"%1\""
 
 
-#define DEFAULT_APP_RAR                                             "rar"
-#define DEFAULT_APP_UNRAR                                           "unrar"
-#define DEFAULT_APP_ZIP                                             "zip"
-#define DEFAULT_APP_UNZIP                                           "unzip"
-#define DEFAULT_APP_GZIP                                            "gzip"
-#define DEFAULT_APP_GUNZIP                                          "gunzip -V"
-#define DEFAULT_APP_ARJ                                             "arj"
-#define DEFAULT_APP_UNARJ                                           "unarj"
-#define DEFAULT_APP_ACE                                             "ace"
-#define DEFAULT_APP_UNACE                                           "unace"
-#define DEFAULT_APP_TAR                                             "tar --help"
-#define DEFAULT_APP_UNTAR                                           "tar --help"
-
-
-#define DEFAULT_LIST_RAR_CONTENT                                    "unrar l \"%1\" > %2"
-#define DEFAULT_LIST_ZIP_CONTENT                                    "unzip -l \"%1\" > %2"
-#define DEFAULT_LIST_GZIP_CONTENT                                   "gunzip -l \"%1\" > %2"
-#define DEFAULT_LIST_ARJ_CONTENT                                    "unarj -l \"%1\" > %2"
-#define DEFAULT_LIST_ACE_CONTENT                                    "unace -l \"%1\" > %2"
-#define DEFAULT_LIST_TAR_CONTENT                                    "tar tvf \"%1\" > %2"
-#define DEFAULT_LIST_TARGZ_CONTENT                                  "tar tzvf \"%1\" > %2"
-#define DEFAULT_LIST_TARBZ_CONTENT                                  "tar tjvf \"%1\" > %2"
-
-
-#define DEFAULT_ARCHIVE_LIST_OUTPUT                                 "/tmp/mcworker_archive.list"
-
-
 #define DEFAULT_FILE_TRANSFER_BUFFER_SIZE                           65536   // 131072
 
 
@@ -79,6 +52,46 @@
 #define DEFAULT_DIR_LIST_SLEEP_TIIMEOUT_US                          50
 
 
+
+#define DEFAULT_APP_RAR                                             "rar"
+#define DEFAULT_APP_UNRAR                                           "unrar"
+#define DEFAULT_APP_ZIP                                             "zip"
+#define DEFAULT_APP_UNZIP                                           "unzip"
+#define DEFAULT_APP_GZIP                                            "gzip"
+#define DEFAULT_APP_GUNZIP                                          "gunzip -V"
+#define DEFAULT_APP_ARJ                                             "arj"
+#define DEFAULT_APP_UNARJ                                           "unarj"
+#define DEFAULT_APP_ACE                                             "ace"
+#define DEFAULT_APP_UNACE                                           "unace"
+#define DEFAULT_APP_TAR                                             "tar --help"
+#define DEFAULT_APP_UNTAR                                           "tar --help"
+
+
+#define DEFAULT_LIST_RAR_CONTENT                                    "unrar l \"%1\" > %2"
+#define DEFAULT_LIST_ZIP_CONTENT                                    "unzip -l \"%1\" > %2"
+#define DEFAULT_LIST_GZIP_CONTENT                                   "gunzip -l \"%1\" > %2"
+#define DEFAULT_LIST_ARJ_CONTENT                                    "unarj -l \"%1\" > %2"
+#define DEFAULT_LIST_ACE_CONTENT                                    "unace -l \"%1\" > %2"
+#define DEFAULT_LIST_TAR_CONTENT                                    "tar tvf \"%1\" > %2"
+#define DEFAULT_LIST_TARGZ_CONTENT                                  "tar tzvf \"%1\" > %2"
+#define DEFAULT_LIST_TARBZ_CONTENT                                  "tar tjvf \"%1\" > %2"
+
+#define DEFAULT_EXTRACT_RAR_CONTENT                                 "unrar x \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_ZIP_CONTENT                                 "unzip \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_GZIP_CONTENT                                "gunzip \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_ARJ_CONTENT                                 "unarj \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_ACE_CONTENT                                 "unace \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_TAR_CONTENT                                 "tar xvf \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_TARGZ_CONTENT                               "tar xzvf \"%1\" \"%2\""
+#define DEFAULT_EXTRACT_TARBZ_CONTENT                               "tar xjvf \"%1\" \"%2\""
+
+// Add File to Archive
+
+// Remove File From Archive
+
+
+#define DEFAULT_ARCHIVE_LIST_OUTPUT                                 "/tmp/mcworker_archive.list"
+
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR                       4
 #define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_RAR                   "yyyy-MM-dd HH:mm"
 
@@ -98,6 +111,10 @@
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ACE                       3
 
 #define DEFAULT_ARCHIVE_DATE_RANGE_BEGIN                            1980
+
+
+
+
 
 #endif // CONSTANTS
 

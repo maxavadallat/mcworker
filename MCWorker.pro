@@ -19,6 +19,8 @@ QT                      += widgets
 
 CONFIG                  -= app_bundle
 
+# Mac SDK
+QMAKE_MAC_SDK           = macosx10.11
 
 # Sources
 SOURCES                 += src/mcwmain.cpp \

@@ -70,6 +70,8 @@ public:
     void extractFile(const QString& aSourcePath, const QString& aTargetPath);
     // Remove File
     void removeFile(const QString& aFilePath);
+    // View File
+    void viewFile(const QString& aFilePath);
 
     // Extract Archive
     void extractArchive(const QString& aTargetPath);
