@@ -463,6 +463,9 @@ void FileServerConnectionWorker::sendStarted()
     // Set Up New Data
     newDataMap[DEFAULT_KEY_CID]         = cID;
     newDataMap[DEFAULT_KEY_OPERATION]   = operation;
+    newDataMap[DEFAULT_KEY_PATH]        = path;
+    newDataMap[DEFAULT_KEY_SOURCE]      = source;
+    newDataMap[DEFAULT_KEY_TARGET]      = target;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_START);
 
     // Emit Data Available Signal
@@ -685,6 +688,8 @@ void FileServerConnectionWorker::sendFinished()
     newDataMap[DEFAULT_KEY_CID]         = cID;
     newDataMap[DEFAULT_KEY_OPERATION]   = operation;
     newDataMap[DEFAULT_KEY_PATH]        = path;
+    newDataMap[DEFAULT_KEY_SOURCE]      = source;
+    newDataMap[DEFAULT_KEY_TARGET]      = target;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_READY);
 
     // Emit Data Available Signal

@@ -419,7 +419,7 @@ int fnstrcmp(const QString& a, const QString& b)
 #define __QS_CHECK_ABORT        if (aAbort) { qDebug() << "#### QSABORT!"; return; }
 
 //==============================================================================
-// Quick Sort
+// File Info List Quick Sort
 //==============================================================================
 void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSort, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort)
 {
@@ -470,9 +470,9 @@ void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSor
 }
 
 //==============================================================================
-// Dir First
+// Dir First Compare
 //==============================================================================
-int dirFirst(const QFileInfo& a, const QFileInfo& b)
+int dirFirstCompare(const QFileInfo& a, const QFileInfo& b)
 {
     // Check If Any File Is Dir
     if ((a.isDir() || a.isSymLink()) && !b.isDir() && !b.isSymLink())
@@ -494,14 +494,14 @@ int dirFirst(const QFileInfo& a, const QFileInfo& b)
 }
 
 //==============================================================================
-// Name Sort
+// Name Sort Compare
 //==============================================================================
-int nameSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int nameSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -523,14 +523,14 @@ int nameSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
 }
 
 //==============================================================================
-// Extension Sort
+// Extension Sort Compare
 //==============================================================================
-int extSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int extSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -548,7 +548,7 @@ int extSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& d
     // Check If Both File Is a Dir Or Link
     if ((a.isDir() && b.isDir()) || (a.isSymLink() && b.isSymLink()) || (a.isDir() && b.isSymLink()) || (a.isSymLink() && b.isDir()))
         // Return Name Sort
-        return nameSort(a, b, r, df, cs);
+        return nameSortCompare(a, b, r, df, cs);
 
     // Check Base Name
     if (aSplit[0].isEmpty() && !bSplit[0].isEmpty()) {
@@ -567,20 +567,20 @@ int extSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& d
         return r ? -result : result;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
-// Type Sort
+// Type Sort Compare
 //==============================================================================
-int typeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int typeSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     Q_UNUSED(cs);
 
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -594,14 +594,14 @@ int typeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
 }
 
 //==============================================================================
-// Size Sort
+// Size Sort Compare
 //==============================================================================
-int sizeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int sizeSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -611,7 +611,7 @@ int sizeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
     // Check If Both File Is a Dir Or Link
     if ((a.isDir() && b.isDir()) || (a.isSymLink() && b.isSymLink()))
         // Return Name Sort
-        return nameSort(a, b, r, df, cs);
+        return nameSortCompare(a, b, r, df, cs);
 
     // Check File Size
     if (a.size() > b.size())
@@ -622,18 +622,18 @@ int sizeSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
         return r ? 1 : -1;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
-// Date Sort
+// Date Sort Compare
 //==============================================================================
-int dateSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int dateSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -649,18 +649,18 @@ int dateSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
         return r ? 1 : -1;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
-// Owners Sort
+// Owners Sort Compare
 //==============================================================================
-int ownSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int ownSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -676,18 +676,18 @@ int ownSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& d
         return r ? -result : result;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
-// Permission Sort
+// Permission Sort Compare
 //==============================================================================
-int permSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int permSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -703,18 +703,18 @@ int permSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
         return r ? 1 : -1;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
-// Attributes Sort
+// Attributes Sort Compare
 //==============================================================================
-int attrSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
+int attrSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs)
 {
     // Check Dir First
     if (df) {
         // Apply Dir First Filter
-        int dfr = dirFirst(a, b);
+        int dfr = dirFirstCompare(a, b);
 
         // Check Dir First Result
         if (dfr)
@@ -730,7 +730,7 @@ int attrSort(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& 
         return r ? 1 : -1;
 
     // Return Name Sort Result
-    return nameSort(a, b, r, df, cs);
+    return nameSortCompare(a, b, r, df, cs);
 }
 
 //==============================================================================
@@ -746,14 +746,14 @@ void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, c
     // Switch Sorting Method
     switch (aSortType) {
         default:
-        case EFSTName:          quickSort(aFileInfoList, 0, flCount-1, nameSort, aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTExtension:     quickSort(aFileInfoList, 0, flCount-1, extSort,  aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTType:          quickSort(aFileInfoList, 0, flCount-1, typeSort, aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTSize:          quickSort(aFileInfoList, 0, flCount-1, sizeSort, aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTDate:          quickSort(aFileInfoList, 0, flCount-1, dateSort, aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTOwnership:     quickSort(aFileInfoList, 0, flCount-1, ownSort,  aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTPermission:    quickSort(aFileInfoList, 0, flCount-1, permSort, aReverse, aDirFirst, aCase, aAbort); break;
-        case EFSTAttributes:    quickSort(aFileInfoList, 0, flCount-1, attrSort, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTName:          quickSort(aFileInfoList, 0, flCount-1, nameSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTExtension:     quickSort(aFileInfoList, 0, flCount-1, extSortCompare,  aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTType:          quickSort(aFileInfoList, 0, flCount-1, typeSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTSize:          quickSort(aFileInfoList, 0, flCount-1, sizeSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTDate:          quickSort(aFileInfoList, 0, flCount-1, dateSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTOwnership:     quickSort(aFileInfoList, 0, flCount-1, ownSortCompare,  aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTPermission:    quickSort(aFileInfoList, 0, flCount-1, permSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
+        case EFSTAttributes:    quickSort(aFileInfoList, 0, flCount-1, attrSortCompare, aReverse, aDirFirst, aCase, aAbort); break;
     }
 }
 

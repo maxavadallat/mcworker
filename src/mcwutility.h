@@ -126,17 +126,48 @@ bool isDir(const QString& aDirPath);
 // Check If Dir Is Empty
 bool isDirEmpty(const QString& aDirPath);
 
+
+// =========
+
+
 // Case In Sensitive Compare
 int fnstricmp(const QString& a, const QString& b);
 // Case Sensitive Compare
 int fnstrcmp(const QString& a, const QString& b);
 
-// Get Dir List
-QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidden = true);
-
 // Compare Method Type
 typedef int (*CompareFuncType)(const QFileInfo&, const QFileInfo&, const bool&, const bool&, const bool&);
 
+// File Info List Quick Sort
+void quickSort(QFileInfoList& aList, int aLeft, int aRight, CompareFuncType aSort, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort);
+
+// Dir First Compare
+int dirFirstCompare(const QFileInfo& a, const QFileInfo& b);
+// Name Sort Compare
+int nameSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Extension Sort Compare
+int extSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Type Sort Compare
+int typeSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Size Sort Compare
+int sizeSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Date Sort Compare
+int dateSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Owners Sort Compare
+int ownSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Permission Sort Compare
+int permSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+// Attributes Sort Compare
+int attrSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const bool& df, const bool& cs);
+
+
+
+// =========
+
+
+
+// Get Dir List
+QFileInfoList getDirFileInfoList(const QString& aDirPath, const bool& aShowHidden = true);
 // Sort File List
 void sortFileList(QFileInfoList& aFileInfoList, const FileSortType& aSortType, const bool& aReverse, const bool& aDirFirst, const bool& aCase, const bool& aAbort);
 
