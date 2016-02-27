@@ -110,7 +110,7 @@ private:
     // Wait
     void waitWorker(const FSCWStatusType& aStatus = EFSCWSWaiting);
     // Send Operation Started Data
-    void sendStarted();
+    void sendStarted(const QString& aOperation = "", const QString& aPath = "", const QString& aSource = "", const QString& aTarget = "");
     // Send Operation Aborted Data
     void sendAborted(const QString& aPath, const QString& aSource = "", const QString& aTarget = "");
     // Send Operation Skipped Data
@@ -132,7 +132,7 @@ private:
     // Send Search File Item Found Data
     void sendSearchFileItemFound(const QString& aPath, const QString& aFileName);
     // Send Operation Finished Data
-    void sendFinished();
+    void sendFinished(const QString& aOperation = "", const QString& aPath = "", const QString& aSource = "", const QString& aTarget = "");
 
     // Status To String
     QString statusToString(const FSCWStatusType& aStatus);
@@ -216,7 +216,7 @@ private: // Operations
     qint64 writeBuffer(char* aBuffer, const qint64& aSize, QFile& aTargetFile, const QString& aSource, const QString& aTarget);
 
     // Copy File
-    bool copyFile(QString& aSource, QString& aTarget);
+    bool copyFile(QString& aSource, QString& aTarget, const bool& aSendFinished = true);
     // Delete File
     bool deleteFile(const QString& aFilePath, const bool& aSendFinished = true);
     // Rename File

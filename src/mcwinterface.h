@@ -177,8 +177,5 @@
 #define DEFAULT_EXTENSION_TARGZ                     "tar.gz"
 #define DEFAULT_EXTENSION_TARBZ                     "tar.bz2"
 
-
-
-
 #endif // INTERFACE
 

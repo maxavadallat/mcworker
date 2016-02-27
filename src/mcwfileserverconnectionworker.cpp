@@ -213,11 +213,14 @@ void FileServerConnectionWorker::stopWorker(const bool& aWait)
 //==============================================================================
 void FileServerConnectionWorker::clearOptions()
 {
+    qDebug() << "FileServerConnectionWorker::clearOptions";
+
     // Lock Mutex
     mutex.lock();
 
     // Reset Options
     options = 0;
+
     // Reset Supress Merge Confirmation
     supressMergeConfirm = false;
 
@@ -370,6 +373,12 @@ void FileServerConnectionWorker::processOperationQueue()
         return;
     }
 
+    // Check If Queue Empty
+    if (fsConnection->isQueueEmpty()) {
+        qWarning() << "FileServerConnectionWorker::processOperationQueue - QUEUE EMPTY!!";
+        return;
+    }
+
     // Set Status
     setStatus(EFSCWSRunning);
 
@@ -455,17 +464,17 @@ void FileServerConnectionWorker::parseQueueItem(const QVariantMap& aDataMap)
 //==============================================================================
 // Send Operation Started Data
 //==============================================================================
-void FileServerConnectionWorker::sendStarted()
+void FileServerConnectionWorker::sendStarted(const QString& aOperation, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
     // Init New Data
     QVariantMap newDataMap;
 
     // Set Up New Data
     newDataMap[DEFAULT_KEY_CID]         = cID;
-    newDataMap[DEFAULT_KEY_OPERATION]   = operation;
-    newDataMap[DEFAULT_KEY_PATH]        = path;
-    newDataMap[DEFAULT_KEY_SOURCE]      = source;
-    newDataMap[DEFAULT_KEY_TARGET]      = target;
+    newDataMap[DEFAULT_KEY_OPERATION]   = aOperation.isEmpty() ? operation : aOperation;
+    newDataMap[DEFAULT_KEY_PATH]        = aPath.isEmpty() ? path : aPath;
+    newDataMap[DEFAULT_KEY_SOURCE]      = aSource.isEmpty() ? source : aSource;
+    newDataMap[DEFAULT_KEY_TARGET]      = aTarget.isEmpty() ? target : aTarget;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_START);
 
     // Emit Data Available Signal
@@ -679,17 +688,17 @@ void FileServerConnectionWorker::sendSearchFileItemFound(const QString& aPath, c
 //==============================================================================
 // Send Operation Finished Data
 //==============================================================================
-void FileServerConnectionWorker::sendFinished()
+void FileServerConnectionWorker::sendFinished(const QString& aOperation, const QString& aPath, const QString& aSource, const QString& aTarget)
 {
     // Init New Data
     QVariantMap newDataMap;
 
     // Set Up New Data
     newDataMap[DEFAULT_KEY_CID]         = cID;
-    newDataMap[DEFAULT_KEY_OPERATION]   = operation;
-    newDataMap[DEFAULT_KEY_PATH]        = path;
-    newDataMap[DEFAULT_KEY_SOURCE]      = source;
-    newDataMap[DEFAULT_KEY_TARGET]      = target;
+    newDataMap[DEFAULT_KEY_OPERATION]   = aOperation.isEmpty() ? operation : aOperation;
+    newDataMap[DEFAULT_KEY_PATH]        = aPath.isEmpty() ? path : aPath;
+    newDataMap[DEFAULT_KEY_SOURCE]      = aSource.isEmpty() ? source : aSource;
+    newDataMap[DEFAULT_KEY_TARGET]      = aTarget.isEmpty() ? target : aTarget;
     newDataMap[DEFAULT_KEY_RESPONSE]    = QString(DEFAULT_RESPONSE_READY);
 
     // Emit Data Available Signal
@@ -1100,7 +1109,7 @@ bool FileServerConnectionWorker::deleteFile(const QString& aFilePath, const bool
     // Check Send Finished
     if (aSendFinished) {
         // Send Finished
-        sendFinished();
+        sendFinished(DEFAULT_OPERATION_DELETE_FILE, aFilePath);
     }
 
     return success;
@@ -1130,41 +1139,10 @@ void FileServerConnectionWorker::deleteDirectory(const QString& aDirPath)
     int flCount = fileList.count();
 
     // Check File List Count
-    if (flCount <= 0) {
+    if (flCount > 0) {
 
-        qDebug() << "FileServerConnectionWorker::deleteDirectory - cID: " << cID << " - localPath: " << localPath;
+        qDebug() << "FileServerConnectionWorker::deleteDirectory - cID: " << cID << " - localPath: " << localPath << " - QUEUE";
 
-        // Init Result
-        bool result = true;
-
-        do  {
-            // Check Abort Flag
-            __CHECK_OP_ABORTING;
-
-            // Delete Dir
-            result = dir.rmdir(localPath);
-
-            // Check Abort Flag
-            __CHECK_OP_ABORTING;
-
-            // Check Result
-            if (!result) {
-                // Send Error
-                sendError(DEFAULT_ERROR_GENERAL, localPath, "", "");
-
-                // Wait For User Response
-                waitWorker();
-            }
-
-        } while (!result && response == DEFAULT_CONFIRM_RETRY);
-
-        // Check Abort Flag
-        __CHECK_OP_ABORTING;
-
-        // Send Operation Finished Data
-        sendFinished();
-
-    } else {
         // Check Global Options
         if (options & DEFAULT_CONFIRM_NOALL) {
             // Send Skipped
@@ -1233,6 +1211,37 @@ void FileServerConnectionWorker::deleteDirectory(const QString& aDirPath)
             // Check Abort Flag
             __CHECK_OP_ABORTING;
         }
+
+        // Send Queue Finished Here
+        sendFinished(DEFAULT_OPERATION_QUEUE);
+
+    } else {
+
+        qDebug() << "FileServerConnectionWorker::deleteDirectory - cID: " << cID << " - localPath: " << localPath;
+
+        // Init Result
+        bool result = true;
+
+        do  {
+            // Check Abort Flag
+            __CHECK_OP_ABORTING;
+
+            // Delete Dir
+            result = dir.rmdir(localPath);
+
+            // Check Abort Flag
+            __CHECK_OP_ABORTING;
+
+            // Check Result
+            if (!result) {
+                // Send Error
+                sendError(DEFAULT_ERROR_GENERAL, localPath, "", "");
+
+                // Wait For User Response
+                waitWorker();
+            }
+
+        } while (!result && response == DEFAULT_CONFIRM_RETRY);
 
         // Check Abort Flag
         __CHECK_OP_ABORTING;
@@ -1357,10 +1366,6 @@ void FileServerConnectionWorker::copyOperation(const QString& aSource, const QSt
     // Init Local Target
     QString localTarget = aTarget;
 
-    // Send Started
-    sendStarted();
-
-
     // Check Abort Flag
     __CHECK_OP_ABORTING;
 
@@ -1472,9 +1477,8 @@ qint64 FileServerConnectionWorker::writeBuffer(char* aBuffer, const qint64& aSiz
 //==============================================================================
 // Copy File
 //==============================================================================
-bool FileServerConnectionWorker::copyFile(QString& aSource, QString& aTarget)
+bool FileServerConnectionWorker::copyFile(QString& aSource, QString& aTarget, const bool& aSendFinished)
 {
-
     // Check Abort Flag
     __CHECK_OP_ABORTING false;
 
@@ -1534,6 +1538,9 @@ bool FileServerConnectionWorker::copyFile(QString& aSource, QString& aTarget)
 
     // Check Abort Flag
     __CHECK_OP_ABORTING false;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
 
     // Init Source File
     QFile sourceFile(aSource);
@@ -1666,8 +1673,11 @@ bool FileServerConnectionWorker::copyFile(QString& aSource, QString& aTarget)
     // Check Abort Flag
     __CHECK_OP_ABORTING false;
 
-    // Send Operation Finished Data
-    sendFinished();
+    // Check Send Finished
+    if (aSendFinished) {
+        // Send Operation Finished Data
+        sendFinished(DEFAULT_OPERATION_COPY_FILE, "", aSource, aTarget);
+    }
 
     return true;
 }
@@ -1683,6 +1693,9 @@ void FileServerConnectionWorker::copyDirectory(const QString& aSourceDir, const 
     QString localTarget = aTargetDir;
 
     qDebug() << "FileServerConnectionWorker::copyDirectory - cID: " << cID << " - localSource: " << localSource << " - localTarget: " << localTarget;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_COPY_FILE, "", aSourceDir, aTargetDir);
 
     // Init Success
     bool success = false;
@@ -1764,15 +1777,12 @@ void FileServerConnectionWorker::copyDirectory(const QString& aSourceDir, const 
 //==============================================================================
 void FileServerConnectionWorker::moveOperation(const QString& aSource, const QString& aTarget)
 {
-    qDebug() << "FileServerConnectionWorker::move - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
+    qDebug() << "FileServerConnectionWorker::moveOperation - cID: " << cID << " - aSource: " << aSource << " - aTarget: " << aTarget;
 
     // Init Local Source
     QString localSource = aSource;
     // Init Local Target
     QString localTarget = aTarget;
-
-    // Send Started
-    sendStarted();
 
     // Check Abort Flag
     __CHECK_OP_ABORTING;
@@ -1807,12 +1817,12 @@ void FileServerConnectionWorker::moveOperation(const QString& aSource, const QSt
         } else {
 
             // Copy File
-            if (copyFile(localSource, localTarget)) {
+            if (copyFile(localSource, localTarget, false)) {
                 // Check Abort Flag
                 __CHECK_OP_ABORTING;
 
                 // Delete File
-                deleteFile(localSource);
+                deleteFile(localSource, false);
             }
         }
 
@@ -1820,7 +1830,7 @@ void FileServerConnectionWorker::moveOperation(const QString& aSource, const QSt
         __CHECK_OP_ABORTING;
 
         // Send Operation Finished Data
-        sendFinished();
+        sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
     }
 }
 
@@ -1858,6 +1868,9 @@ void FileServerConnectionWorker::renameFile(QString& aSource, QString& aTarget)
 
     // Check Abort Flag
     __CHECK_OP_ABORTING;
+
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_MOVE_FILE, "", aSource, aTarget);
 
     // Init File
     QFile file(aSource);
@@ -1903,9 +1916,10 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
     // Init Local Target
     QString localTarget = aTargetDir;
 
-    qDebug() << "FileServerConnectionWorker::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
+    // Send Started
+    sendStarted(DEFAULT_OPERATION_MOVE_FILE, "", aSourceDir, aTargetDir);
 
-    // ---------------------
+    qDebug() << "FileServerConnectionWorker::moveDirectory - cID: " << cID << " - aSourceDir: " << aSourceDir << " - aTargetDir: " << aTargetDir;
 
     // Check If Target Dir Exists & Empty & Source IS Empty
     if (QFile::exists(localTarget) && isDirEmpty(localTarget) && !isDirEmpty(localSource)) {
@@ -1939,8 +1953,6 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
 
     // Check Abort Flag
     __CHECK_OP_ABORTING;
-
-    // ---------------------
 
     // Check If Source Dir Exists & Target Dir Doesn't Exists & On Same Drive
     if (QFile::exists(localSource) && !QFile::exists(localTarget) && isOnSameDrive(localSource, localTarget)) {
@@ -1981,8 +1993,6 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
     // Check Abort Flag
     __CHECK_OP_ABORTING;
 
-    // ---------------------
-
     // Check If Target Dir Exists
     if (!QFile::exists(localTarget)) {
         // Init Success
@@ -2013,6 +2023,10 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
 
             return;
         }
+
+        // Set Supress Merge Confirm
+        supressMergeConfirm = true;
+
     } else {
 
         // Check If Local Source And Target Is The Same
@@ -2058,10 +2072,13 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
         }
 
         // Check If Target Dir Empty & Global Options
-        if (!isDirEmpty(localTarget) && !(options & DEFAULT_CONFIRM_YESALL)) {
+        if (!isDirEmpty(localTarget) && !(options & DEFAULT_CONFIRM_YESALL) && !supressMergeConfirm) {
 
             // Send Need Confirm
             sendConfirmRequest(DEFAULT_ERROR_TARGET_DIR_EXISTS, "", localSource, localTarget);
+
+            // Wait For User Response
+            waitWorker();
 
             // Switch Response
             switch (response) {
@@ -2093,8 +2110,6 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
 
     // Check Abort Flag
     __CHECK_OP_ABORTING;
-
-    // ---------------------
 
     // Init Source Dir
     QDir sourceDir(localSource);
@@ -2129,10 +2144,13 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
             QString fileName = sourceEntryList[i];
             // Send File Operation Queue Item Found
             sendQueueItemFound("", localSource + fileName, localTarget + fileName);
+
+            // Check Abort Flag
+            __CHECK_OP_ABORTING;
         }
 
-        // Send Operation Finished Data
-        sendFinished();
+        // Send Queue Finished Here
+        sendFinished(DEFAULT_OPERATION_QUEUE);
 
     } else {
 
@@ -2149,7 +2167,7 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
             // Check Success
             if (!success) {
                 // Send Error
-                sendError(DEFAULT_ERROR_GENERAL, aSourceDir, aSourceDir, aTargetDir);
+                sendError(DEFAULT_ERROR_GENERAL, localSource, localSource, localTarget);
 
                 // Wait For User Response
                 waitWorker();
@@ -2157,7 +2175,7 @@ void FileServerConnectionWorker::moveDirectory(const QString& aSourceDir, const 
         } while (!success && response == DEFAULT_CONFIRM_RETRY);
 
         // Send Operation Finished Data
-        sendFinished();
+        sendFinished(DEFAULT_OPERATION_MOVE_FILE, "", localSource, localTarget);
     }
 }
 
@@ -2240,11 +2258,11 @@ void FileServerConnectionWorker::searchFile(const QString& aName, const QString&
     // Init Local Path
     QString localPath = aDirPath;
 
-    // Send Started
-    sendStarted();
-
     // Check Abort Flag
     __CHECK_OP_ABORTING;
+
+    // Send Started
+    sendStarted();
 
     // Check Source File Exists
     if (!checkSourceFileExists(localPath, true)) {
