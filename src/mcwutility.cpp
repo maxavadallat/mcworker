@@ -640,6 +640,14 @@ int dateSortCompare(const QFileInfo& a, const QFileInfo& b, const bool& r, const
             return dfr;
     }
 
+    // Check File Name
+    if (a.fileName() == QString("..") && b.fileName() != QString(".."))
+        return -1;
+
+    // Check File Name
+    if (a.fileName() != QString("..") && b.fileName() == QString(".."))
+        return 1;
+
     // Check File Date
     if (a.lastModified() < b.lastModified())
         return r ? -1 : 1;

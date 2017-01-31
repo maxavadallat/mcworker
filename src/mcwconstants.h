@@ -67,14 +67,14 @@
 #define DEFAULT_APP_UNTAR                                           "tar --help"
 
 
-#define DEFAULT_LIST_RAR_CONTENT                                    "unrar l \"%1\" > %2"
-#define DEFAULT_LIST_ZIP_CONTENT                                    "unzip -l \"%1\" > %2"
-#define DEFAULT_LIST_GZIP_CONTENT                                   "gunzip -l \"%1\" > %2"
-#define DEFAULT_LIST_ARJ_CONTENT                                    "unarj -l \"%1\" > %2"
-#define DEFAULT_LIST_ACE_CONTENT                                    "unace -l \"%1\" > %2"
-#define DEFAULT_LIST_TAR_CONTENT                                    "tar tvf \"%1\" > %2"
-#define DEFAULT_LIST_TARGZ_CONTENT                                  "tar tzvf \"%1\" > %2"
-#define DEFAULT_LIST_TARBZ_CONTENT                                  "tar tjvf \"%1\" > %2"
+#define DEFAULT_LIST_RAR_CONTENT                                    "unrar l \"%1\" > ~/%2"
+#define DEFAULT_LIST_ZIP_CONTENT                                    "unzip -l \"%1\" > ~/%2"
+#define DEFAULT_LIST_GZIP_CONTENT                                   "gunzip -l \"%1\" > ~/%2"
+#define DEFAULT_LIST_ARJ_CONTENT                                    "unarj -l \"%1\" > ~/%2"
+#define DEFAULT_LIST_ACE_CONTENT                                    "unace -l \"%1\" > ~/%2"
+#define DEFAULT_LIST_TAR_CONTENT                                    "tar tvf \"%1\" > ~/%2"
+#define DEFAULT_LIST_TARGZ_CONTENT                                  "tar tzvf \"%1\" > ~/%2"
+#define DEFAULT_LIST_TARBZ_CONTENT                                  "tar tjvf \"%1\" > ~/%2"
 
 #define DEFAULT_EXTRACT_RAR_CONTENT                                 "unrar x \"%1\" \"%2\""
 #define DEFAULT_EXTRACT_ZIP_CONTENT                                 "unzip \"%1\" \"%2\""
@@ -90,13 +90,13 @@
 // Remove File From Archive
 
 
-#define DEFAULT_ARCHIVE_LIST_OUTPUT                                 "/tmp/mcworker_archive.list"
+#define DEFAULT_ARCHIVE_LIST_OUTPUT                                 ".mcworker_archive.list"
 
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_RAR                       4
 #define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_RAR                   "yyyy-MM-dd HH:mm"
 
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_ZIP                       3
-#define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP                   "MM-dd-yy HH:mm"
+#define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_ZIP                   "MM-dd-yyyy HH:mm"
 
 #define DEFAULT_ARCHIVE_FILE_INFO_COLUMNS_TAR                       9
 #define DEFAULT_ARCHIVE_FILE_INFO_DATE_FORMAT_TAR_TEMPLATE          "%1-%2-%3"

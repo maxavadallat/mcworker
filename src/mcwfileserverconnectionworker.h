@@ -62,6 +62,7 @@ enum FSCOperationType
 class FileServerConnectionWorker : public QThread
 {
     Q_OBJECT
+
 public:
 
     // Constructor

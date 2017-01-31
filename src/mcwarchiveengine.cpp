@@ -388,7 +388,7 @@ void ArchiveEngine::readFileList()
 void ArchiveEngine::parseTempFileList()
 {
     // Init Temp List File
-    QFile tempListFile(DEFAULT_ARCHIVE_LIST_OUTPUT);
+    QFile tempListFile(QString("%1/%2").arg(QDir::homePath()).arg(DEFAULT_ARCHIVE_LIST_OUTPUT));
 
     // Reset Temp List
     tempList = "";
@@ -425,6 +425,8 @@ void ArchiveEngine::parseTempFileList()
         tempListFile.close();
         // Remove Temp List File
         tempListFile.remove();
+    } else {
+        qWarning() << "ArchiveEngine::parseTempFileList - CAN NOT OPEN FILE: " << tempListFile.fileName();
     }
 }
 
@@ -433,7 +435,7 @@ void ArchiveEngine::parseTempFileList()
 //==============================================================================
 ArchiveFileInfo* ArchiveEngine::parseTempListLine(const QString& aLine)
 {
-    //qDebug() << "ArchiveEngine::parseLine - aLine: " << aLine;
+    //qDebug() << "ArchiveEngine::parseLine - currentFormat: " << currentFormat << " - aLine: " << aLine;
 
     // Get Current Line Trimmed
     QString currLine = aLine.trimmed();

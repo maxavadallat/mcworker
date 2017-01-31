@@ -413,7 +413,7 @@ void FileServerConnectionWorker::parseQueueItem(const QVariantMap& aDataMap)
     // Get Operation
     operation   = lastOperationDataMap[DEFAULT_KEY_OPERATION].toString();
     // Get Options
-    options     = lastOperationDataMap[DEFAULT_KEY_OPTIONS].toInt();
+    options     |= lastOperationDataMap[DEFAULT_KEY_OPTIONS].toInt();
     // Get Filters
     filters     = lastOperationDataMap[DEFAULT_KEY_FILTERS].toInt();
     // Get Sort Flags
@@ -2455,7 +2455,6 @@ bool FileServerConnectionWorker::checkSourceDirExist(QString& aDirPath, const bo
 //==============================================================================
 bool FileServerConnectionWorker::checkTargetFileExist(QString& aTargetPath, const bool& aExpected)
 {
-
     // Init Dir Info
     QFileInfo fileInfo(aTargetPath);
     // Get File Exists
